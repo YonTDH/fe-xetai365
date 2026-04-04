@@ -5,15 +5,20 @@ import { Footer } from '@/components/Footer';
 
 export function MainLayout() {
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950 font-sans antialiased overflow-x-hidden selection:bg-primary/20 selection:text-primary">
-      <header className="fixed top-0 left-0 right-0 z-50 border-b bg-white text-black shadow-sm">
+    <div className="min-h-screen bg-white dark:bg-zinc-950 font-sans antialiased selection:bg-primary/20 selection:text-primary relative">
+      {/* Top Header: scrolls out of view naturally */}
+      <div className="bg-white text-black z-40 relative">
         <Header />
-        <div className="hidden md:block container mx-auto px-4 pb-2 border-t border-gray-200 pt-2">
+      </div>
+      
+      {/* NavMenu: sticks to the top of screen when scrolling past */}
+      <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm transition-all">
+        <div className="hidden md:block container mx-auto px-4 py-2">
           <div className="-ml-[70px]">
             <NavMenu layout="topbar" />
           </div>
         </div>
-      </header>
+      </div>
       
       <main>
         <Outlet />

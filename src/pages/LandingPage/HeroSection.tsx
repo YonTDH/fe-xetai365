@@ -4,7 +4,7 @@ import { ArrowRight, Star, Clock, CheckCircle2 } from "lucide-react"
 
 export function HeroSection() {
   return (
-    <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">
+    <section className="relative pt-16 pb-20 md:pt-24 md:pb-32 overflow-hidden">
       {/* Background Gradients */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 -z-10 w-full h-full bg-gradient-to-b from-primary/5 to-transparent blur-3xl rounded-full" />
       <div className="absolute top-1/4 -right-1/4 -z-10 w-[500px] h-[500px] bg-primary/10 blur-3xl rounded-full opacity-50 animate-pulse" />
