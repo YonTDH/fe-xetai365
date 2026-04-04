@@ -1,7 +1,7 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Monitor, Smartphone, ShieldCheck, Zap } from "lucide-react"
 
-export function Features() {
+export function FeaturesSection() {
   const features = [
     {
       title: "Theo dõi Thời gian thực",
