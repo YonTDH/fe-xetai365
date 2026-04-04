@@ -1,5 +1,5 @@
-import { HeroSection } from './HeroSection';
-import { FeaturesSection } from './FeaturesSection';
+import { HeroSection } from './Banner-News';
+import { FeaturesSection } from './Top-products';
 import { CtaSection } from './CtaSection';
 
 export function LandingPage() {
