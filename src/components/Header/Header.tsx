@@ -17,7 +17,7 @@ export function Header() {
 
       {/* Right */}
       <div className="flex flex-col items-end shrink-0">
-        <span className="font-bold text-base md:text-lg">Liên hệ: 0899966254</span>
+        <span className="font-bold text-base md:text-lg">Liên hệ: 0899.966.254</span>
         <span className="font-semibold text-sm text-primary">ĐỨC XE TẢI</span>
       </div>
     </div>
