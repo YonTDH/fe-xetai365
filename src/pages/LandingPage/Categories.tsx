@@ -52,8 +52,8 @@ export function CategoriesSection() {
     <section className="py-12 bg-white">
       <div className="container mx-auto px-4">
         {/* ─── Header Row ─────────────────────────────────────────────── */}
-        <div className="flex items-end border-b-2 border-[#FFD600] mb-8 gap-6 flex-wrap">
-          {/* Left – Category tabs */}
+        <div className="flex flex-col border-b-2 border-[#FFD600] mb-8">
+          {/* Category tabs */}
           <div className="flex items-end gap-0">
             {CATEGORIES.map((cat) => {
               const isActive = activeCategory === cat.id;
@@ -62,7 +62,7 @@ export function CategoriesSection() {
                   key={cat.id}
                   onClick={() => handleCategoryChange(cat.id)}
                   className={[
-                    "relative font-bold uppercase py-2 md:py-3 px-5 text-sm md:text-base transition-all duration-200 select-none outline-none",
+                    "relative font-bold uppercase py-1.5 md:py-3 px-3 md:px-5 text-xs md:text-base transition-all duration-200 select-none outline-none whitespace-nowrap",
                     "focus-visible:ring-2 focus-visible:ring-[#FFD600]",
                     isActive
                       ? "bg-[#FFD600] text-black z-10"
@@ -73,7 +73,7 @@ export function CategoriesSection() {
                       ? {
                         clipPath:
                           "polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%)",
-                        paddingRight: "32px",
+                        paddingRight: "28px",
                         marginBottom: "-2px",
                       }
                       : undefined
@@ -85,27 +85,29 @@ export function CategoriesSection() {
             })}
           </div>
 
-          {/* Right – Brand sub-tabs */}
-          <div className="flex items-center gap-4 md:gap-8 ml-auto pb-2 flex-wrap">
-            {brands.map((brand) => {
-              const isActive = activeBrand === brand;
-              return (
-                <button
-                  key={brand}
-                  onClick={() =>
-                    setActiveBrand((prev) => (prev === brand ? null : brand))
-                  }
-                  className={[
-                    "text-sm md:text-base font-semibold uppercase transition-colors duration-150 outline-none",
-                    isActive
-                      ? "text-[#c8a800] underline underline-offset-4"
-                      : "text-gray-600 hover:text-black",
-                  ].join(" ")}
-                >
-                  {brand}
-                </button>
-              );
-            })}
+          {/* Brand sub-tabs — horizontally scrollable on mobile */}
+          <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden py-2">
+            <div className="flex items-center gap-4 md:gap-8 min-w-max">
+              {brands.map((brand) => {
+                const isActive = activeBrand === brand;
+                return (
+                  <button
+                    key={brand}
+                    onClick={() =>
+                      setActiveBrand((prev) => (prev === brand ? null : brand))
+                    }
+                    className={[
+                      "text-xs md:text-base font-semibold uppercase transition-colors duration-150 outline-none whitespace-nowrap",
+                      isActive
+                        ? "text-[#c8a800] underline underline-offset-4"
+                        : "text-gray-600 hover:text-black",
+                    ].join(" ")}
+                  >
+                    {brand}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 

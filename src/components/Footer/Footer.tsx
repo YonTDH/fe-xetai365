@@ -13,7 +13,7 @@ import {
 export function Footer() {
   return (
     <footer>
-      {/* ── Top contact bar ─────────────────────────────────────────── */}
+      {/* ── Top contact bar ──*/}
       <div className="bg-[#0f172a] text-gray-300 text-sm md:text-base py-3 border-b border-slate-700">
         <div className="container mx-auto px-4 flex flex-wrap justify-center gap-6 md:gap-12">
           <span className="flex items-center gap-2 font-semibold tracking-wide">
@@ -31,7 +31,7 @@ export function Footer() {
         </div>
       </div>
 
-      {/* ── Main dark body ────────────────────────────────────────── */}
+      {/* ── Main dark body ──*/}
       <div className="bg-[#0f172a] text-gray-300 py-10">
         <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-10">
 
@@ -165,7 +165,7 @@ export function Footer() {
         </div>
       </div>
 
-      {/* ── Bottom copyright bar ────────────────────────────────────── */}
+      {/* ── Bottom copyright bar ─── */}
       <div className="bg-[#222] text-gray-400 text-xs py-4 text-center">
         Copyright © 2017 Ô TÔ NAM VIỆT GROUP | All rights reserved.
       </div>

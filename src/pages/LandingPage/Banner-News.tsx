@@ -39,7 +39,7 @@ export function HeroSection() {
           </div>
 
           {/* Sidebar - News - Right Side */}
-          <div className="w-full mt-6 lg:mt-0 lg:absolute lg:top-0 lg:right-0 lg:bottom-0 lg:w-[320px] xl:w-[380px] bg-white shadow-card rounded-sm overflow-hidden flex flex-col">
+          <div className="w-full mt-6 lg:mt-0 lg:absolute lg:top-0 lg:right-0 lg:bottom-0 lg:w-[320px] xl:w-[380px] bg-white shadow-card rounded-sm overflow-hidden flex flex-col max-h-[380px] lg:max-h-none">
             {/* Header with angled design */}
             <div className="flex relative shrink-0">
               <div
