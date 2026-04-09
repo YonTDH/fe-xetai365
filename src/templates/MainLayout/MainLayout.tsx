@@ -30,23 +30,25 @@ export function MainLayout() {
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950 font-sans antialiased selection:bg-primary/20 selection:text-primary relative">
       {/* Top Header — scrolls naturally */}
-      <div className="bg-white text-black z-40 relative">
+      <div className="bg-navy-950 z-40 relative">
         <Header />
       </div>
 
       {/* Sticky NavBar */}
-      <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm transition-all">
-        <div className="container mx-auto px-4">
-          {/* Desktop topbar nav */}
-          <div className="hidden lg:block py-2">
-            <div className="-ml-[70px]">
+      <div className="sticky top-0 z-50 bg-white/95 border-b border-slate-300 backdrop-blur-sm transition-all">
+        {/* Desktop topbar nav - full width */}
+        <div className="hidden lg:block bg-navy-900 border-b border-slate-700 shadow-card">
+          <div className="container mx-auto px-4 py-1.5">
+            <div className="rounded-lg bg-transparent px-2">
               <NavMenu layout="topbar" />
             </div>
           </div>
+        </div>
 
+        <div className="container mx-auto px-4">
           {/* Mobile nav bar — hamburger only */}
           <div className="flex lg:hidden items-center justify-between py-2.5">
-            <span className="text-sm font-bold text-gray-700 uppercase tracking-wide">
+            <span className="text-sm font-bold text-slate-700 uppercase tracking-wide">
               Menu
             </span>
             <button
@@ -54,7 +56,7 @@ export function MainLayout() {
               aria-label="Mở menu"
               aria-expanded={drawerOpen}
               onClick={() => setDrawerOpen(true)}
-              className="p-2 rounded-md text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+              className="p-2 rounded-md text-slate-700 hover:bg-slate-100 active:bg-slate-300 transition-colors"
             >
               <Menu className="w-6 h-6" />
             </button>
@@ -65,7 +67,7 @@ export function MainLayout() {
       {/* Mobile Drawer Overlay */}
       <div
         className={[
-          'fixed inset-0 z-60 lg:hidden transition-opacity duration-300',
+          'fixed inset-0 z-[60] lg:hidden transition-opacity duration-300',
           drawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
         ].join(' ')}
         aria-hidden={!drawerOpen}

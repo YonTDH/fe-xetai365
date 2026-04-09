@@ -76,16 +76,23 @@ export function NavMenu({
     }
 
     const itemClasses = cn(
-      "group flex items-center rounded-md transition-colors duration-200 outline-none focus-visible:ring-2 focus-visible:ring-primary",
-      "hover:bg-accent hover:text-accent-foreground cursor-pointer text-sm font-medium",
+      "group flex items-center rounded-md transition-colors duration-200 outline-none focus-visible:ring-2 focus-visible:ring-primary-400",
+      layout === 'topbar'
+        ? "hover:bg-white/10 hover:text-white cursor-pointer text-base font-semibold text-slate-300"
+        : "hover:bg-slate-100 hover:text-navy-950 cursor-pointer text-sm font-medium text-slate-700",
       layout === 'sidebar' ? 'w-full' : 'w-auto',
       layout === 'sidebar' 
-        ? cn("px-3 py-2", level > 0 && !collapsed && "text-muted-foreground", level === 0 && "py-2.5") 
-        : cn("px-3 py-2", level > 0 && "py-2 px-3 text-muted-foreground"),
+        ? cn("px-3 py-2", level > 0 && !collapsed && "text-slate-500", level === 0 && "py-2.5 uppercase tracking-wide") 
+        : cn("px-3 py-2", level > 0 && "py-2 px-3 text-sm text-slate-500", level === 0 && "py-2.5"),
       item.disabled && "opacity-50 cursor-not-allowed pointer-events-none",
       collapsed && layout === 'sidebar' && level === 0 ? "justify-center" : "",
-      active && !hasChildren && "bg-primary/10 text-primary group-hover:bg-primary/15 group-hover:text-primary",
-      active && hasChildren && layout === 'sidebar' && level === 0 ? "text-primary bg-primary/5" : ""
+      active && !hasChildren && (
+        layout === 'topbar'
+          ? "bg-white/10 text-white group-hover:bg-white/15 group-hover:text-white"
+          : "bg-primary-50 text-primary-700 group-hover:bg-primary-100 group-hover:text-primary-700"
+      ),
+      active && hasChildren && layout === 'sidebar' && level === 0 ? "text-primary-700 bg-primary-50" : "",
+      active && hasChildren && layout === 'topbar' && level === 0 ? "text-white bg-white/10" : ""
     )
 
     const titleValue = collapsed && level === 0 ? item.label : undefined
@@ -132,7 +139,7 @@ export function NavMenu({
         {hasChildren && layout === 'sidebar' && !collapsed && (
           <div 
             className={cn(
-              "grid transition-all duration-300 ease-in-out ml-4 pl-2 border-l border-border/50",
+              "grid transition-all duration-300 ease-in-out ml-4 pl-2 border-l border-slate-300",
               isOpen ? "grid-rows-[1fr] opacity-100 mt-1 mb-1" : "grid-rows-[0fr] opacity-0"
             )}
           >
@@ -145,7 +152,7 @@ export function NavMenu({
         {hasChildren && layout === 'topbar' && level === 0 && (
           <div 
             className={cn(
-              "absolute left-0 top-full mt-1 min-w-[200px] rounded-md bg-popover text-popover-foreground shadow-md border border-border z-50",
+              "absolute left-0 top-full mt-1 min-w-[200px] rounded-md bg-white text-slate-700 shadow-card border border-slate-300 z-50",
               "transition-all duration-200 origin-top",
               isOpen ? "opacity-100 scale-y-100 pointer-events-auto" : "opacity-0 scale-y-0 pointer-events-none"
             )}
@@ -181,14 +188,15 @@ function ItemContent({
   item: NavItem, hasChildren: boolean, active: boolean, collapsed: boolean, layout: 'sidebar' | 'topbar', level: number, isOpen: boolean 
 }) {
   const showTextAndIcons = !collapsed || layout !== 'sidebar' || level > 0
+  const showIcon = layout === 'sidebar'
 
   return (
     <>
-      {item.icon && (
+      {item.icon && showIcon && (
         <span className={cn(
           "flex items-center justify-center shrink-0",
           showTextAndIcons && "mr-3",
-          active ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+          active ? "text-primary-600" : "text-slate-500 group-hover:text-navy-950"
         )}>
           {item.icon}
         </span>
@@ -201,7 +209,7 @@ function ItemContent({
       )}
 
       {item.badge && showTextAndIcons && (
-        <span className="ml-2 inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold leading-none">
+        <span className="ml-2 inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-primary-100 text-primary-700 text-[10px] font-bold leading-none">
           {item.badge}
         </span>
       )}
@@ -210,7 +218,7 @@ function ItemContent({
         <span className="ml-auto flex items-center justify-center shrink-0">
           <ChevronDown 
             className={cn(
-              "w-4 h-4 transition-transform duration-200 text-muted-foreground/70",
+              "w-4 h-4 transition-transform duration-200 text-slate-500",
               isOpen && "rotate-180"
             )} 
           />
