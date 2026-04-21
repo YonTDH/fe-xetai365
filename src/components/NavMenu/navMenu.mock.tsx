@@ -1,88 +1,102 @@
 import type { NavItem } from './types';
-import { 
-  Home, 
-  Info, 
-  Truck, 
-  Wrench, 
-  Container, 
-  FileText, 
-  Gift, 
-  Phone 
+import {
+  Home,
+  Info,
+  Truck,
+  Wrench,
+  Container,
+  FileText,
+  Gift,
+  Phone,
 } from 'lucide-react';
 
 export const mainNavItems: NavItem[] = [
   {
-    key: "trang-chu",
-    label: "TRANG CHỦ",
-    path: "/",
-    icon: <Home size={18} />
+    key: 'trang-chu',
+    label: 'TRANG CHỦ',
+    path: '/',
+    icon: <Home size={18} />,
   },
   {
-    key: "gioi-thieu",
-    label: "GIỚI THIỆU",
-    path: "/gioi-thieu",
-    icon: <Info size={18} />
+    key: 'gioi-thieu',
+    label: 'GIỚI THIỆU',
+    path: '/gioi-thieu',
+    icon: <Info size={18} />,
   },
   {
-    key: "xe-dau-keo",
-    label: "XE ĐẦU KÉO",
-    path: "/xe-dau-keo",
+    key: 'xe-dau-keo',
+    label: 'XE ĐẦU KÉO',
+    path: '/xe-dau-keo',
     icon: <Truck size={18} />,
     children: [
-      { key: "dau-keo-howo", label: "Đầu kéo Howo", path: "/xe-dau-keo/howo" },
-      { key: "dau-keo-chenglong", label: "Đầu kéo Chenglong", path: "/xe-dau-keo/chenglong" }
-    ]
+      { key: 'xe-dau-keo-dongfeng', label: 'DONGFENG', path: '/xe-dau-keo/dongfeng' },
+      { key: 'xe-dau-keo-my', label: 'ĐẦU KÉO MỸ', path: '/xe-dau-keo/dau-keo-my' },
+      { key: 'xe-dau-keo-howo', label: 'HOWO', path: '/xe-dau-keo/howo' },
+      { key: 'xe-dau-keo-maz', label: 'MAZ', path: '/xe-dau-keo/maz' },
+    ],
   },
   {
-    key: "xe-tai",
-    label: "XE TẢI",
-    path: "/xe-tai",
+    key: 'xe-tai',
+    label: 'XE TẢI',
+    path: '/xe-tai',
     icon: <Truck size={18} />,
     children: [
-      { key: "xe-tai-nhe", label: "Xe tải nhẹ", path: "/xe-tai/nhe" },
-      { key: "xe-tai-trung", label: "Xe tải trung", path: "/xe-tai/trung" },
-      { key: "xe-tai-nang", label: "Xe tải nặng", path: "/xe-tai/nang" }
-    ]
+      { key: 'xe-tai-chenglong', label: 'CHENGLONG', path: '/xe-tai/chenglong' },
+      { key: 'xe-tai-man', label: 'MAN', path: '/xe-tai/man' },
+      { key: 'xe-tai-xe-cu', label: 'XE CŨ', path: '/xe-tai/xe-cu' },
+      { key: 'xe-tai-dongfeng', label: 'DONGFENG', path: '/xe-tai/dongfeng' },
+      { key: 'xe-tai-teraco', label: 'TERACO', path: '/xe-tai/teraco' },
+    ],
   },
   {
-    key: "xe-chuyen-dung",
-    label: "XE CHUYÊN DỤNG",
-    path: "/xe-chuyen-dung",
+    key: 'xe-chuyen-dung',
+    label: 'XE CHUYÊN DỤNG',
+    path: '/xe-chuyen-dung',
     icon: <Wrench size={18} />,
     children: [
-      { key: "xe-ben", label: "Xe ben", path: "/xe-chuyen-dung/xe-ben" },
-      { key: "xe-tron-be-tong", label: "Xe trộn bê tông", path: "/xe-chuyen-dung/xe-tron-be-tong" },
-      { key: "xe-cau", label: "Xe gắn cẩu", path: "/xe-chuyen-dung/xe-cau" }
-    ]
+      { key: 'xe-chuyen-dung-cuu-ho', label: 'XE CỨU HỘ GIAO THÔNG', path: '/xe-chuyen-dung/xe-cuu-ho-giao-thong' },
+      { key: 'xe-chuyen-dung-tuoi-nuoc', label: 'XE TƯỚI NƯỚC', path: '/xe-chuyen-dung/xe-tuoi-nuoc' },
+      { key: 'xe-chuyen-dung-hut-chat-thai', label: 'XE HÚT CHẤT THẢI', path: '/xe-chuyen-dung/xe-hut-chat-thai' },
+      { key: 'xe-chuyen-dung-xe-ben', label: 'XE BEN', path: '/xe-chuyen-dung/xe-ben' },
+      { key: 'xe-chuyen-dung-ep-rac', label: 'XE ÉP RÁC', path: '/xe-chuyen-dung/xe-ep-rac' },
+      { key: 'xe-chuyen-dung-chua-chay', label: 'XE CHỮA CHÁY', path: '/xe-chuyen-dung/xe-chua-chay' },
+      { key: 'xe-chuyen-dung-xitec-xang-dau', label: 'XITEC XĂNG DẦU', path: '/xe-chuyen-dung/xitec-xang-dau' },
+      { key: 'xe-chuyen-dung-dong-lanh', label: 'XE ĐÔNG LẠNH', path: '/xe-chuyen-dung/xe-dong-lanh' },
+      { key: 'xe-chuyen-dung-xe-cau', label: 'XE CẨU', path: '/xe-chuyen-dung/xe-cau' },
+    ],
   },
   {
-    key: "somiromooc",
-    label: "SƠMIROMOOC",
-    path: "/somiromooc",
+    key: 'somiromooc',
+    label: 'SƠMIROMOOC',
+    path: '/somiromooc',
     icon: <Container size={18} />,
     children: [
-      { key: "mooc-xuong", label: "Mooc xương", path: "/somiromooc/mooc-xuong" },
-      { key: "mooc-san", label: "Mooc sàn", path: "/somiromooc/mooc-san" },
-      { key: "mooc-ben", label: "Mooc ben", path: "/somiromooc/mooc-ben" }
-    ]
+      { key: 'somiromooc-cimc-chenzhen', label: 'CIMC CHENZHEN', path: '/somiromooc/cimc-chenzhen' },
+      { key: 'somiromooc-thaco', label: 'THACO', path: '/somiromooc/thaco' },
+      { key: 'somiromooc-tan-thanh', label: 'TÂN THANH', path: '/somiromooc/tan-thanh' },
+      { key: 'somiromooc-bon-xitec-chuyen-dung', label: 'BỒN-XITEC-CHUYÊN DÙNG', path: '/somiromooc/bon-xitec-chuyen-dung' },
+      { key: 'somiromooc-doosung', label: 'DOOSUNG', path: '/somiromooc/doosung' },
+      { key: 'somiromooc-zengda', label: 'ZENGDA', path: '/somiromooc/zengda' },
+      { key: 'somiromooc-asian', label: 'ASIAN', path: '/somiromooc/asian' },
+    ],
   },
   {
-    key: "tin-tuc-su-kien",
-    label: "TIN TỨC - SỰ KIỆN",
-    path: "/tin-tuc",
-    icon: <FileText size={18} />
+    key: 'tin-tuc-su-kien',
+    label: 'TIN TỨC - SỰ KIỆN',
+    path: '/tin-tuc',
+    icon: <FileText size={18} />,
   },
   {
-    key: "khuyen-mai",
-    label: "KHUYẾN MÃI",
-    path: "/khuyen-mai",
+    key: 'khuyen-mai',
+    label: 'KHUYẾN MÃI',
+    path: '/khuyen-mai',
     icon: <Gift size={18} />,
-    badge: "Mới"
+    badge: 'Mới',
   },
   {
-    key: "lien-he",
-    label: "LIÊN HỆ",
-    path: "/lien-he",
-    icon: <Phone size={18} />
-  }
+    key: 'lien-he',
+    label: 'LIÊN HỆ',
+    path: '/lien-he',
+    icon: <Phone size={18} />,
+  },
 ];
