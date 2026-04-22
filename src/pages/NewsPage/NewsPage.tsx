@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { listNewsEvents, type BulletinItem } from '@/api/bulletinsApi';
@@ -70,13 +71,20 @@ export function NewsPage() {
             {items.map((item) => (
               <Card key={item.id} className="border border-slate-300 bg-white shadow-card">
                 <CardHeader className="space-y-1">
-                  <CardTitle className="line-clamp-2 text-base font-bold text-navy-950">{item.title}</CardTitle>
+                  <CardTitle className="line-clamp-2 text-base font-bold text-navy-950">
+                    <Link to={`/tin-tuc/${item.slug}.html`} className="hover:text-primary-700">
+                      {item.title}
+                    </Link>
+                  </CardTitle>
                   <CardDescription>
                     {formatDate(item.publishedAt) ? `Ngày đăng: ${formatDate(item.publishedAt)}` : ' '}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm text-slate-700">
                   <p className="line-clamp-4">{item.excerpt || item.content || 'Đang cập nhật nội dung...'}</p>
+                  <Link to={`/tin-tuc/${item.slug}.html`} className="inline-block text-sm font-semibold text-primary-700">
+                    Xem chi tiết
+                  </Link>
                 </CardContent>
               </Card>
             ))}
