@@ -1,0 +1,2 @@
+export { ProductCategoryPage } from './ProductCategoryPage';
+

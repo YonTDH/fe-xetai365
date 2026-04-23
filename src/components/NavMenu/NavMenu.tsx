@@ -1,10 +1,32 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { NavMenuProps, NavItem } from './types';
-import { mainNavItems as items } from './navMenu.mock';
+import { mainNavItems } from './navMenu.mock';
 import { useNavMenu } from './useNavMenu';
+import { listCatalogCategoriesTree, type CategoryNode } from '@/api/landingApi';
+
+function mapCategoryTreeToNavItems(nodes: CategoryNode[]): NavItem[] {
+  const mapNode = (node: CategoryNode, parentSlug?: string): NavItem => {
+    const children = node.children
+      .filter((child) => child.id > 0 && child.slug)
+      .map((child) => mapNode(child, node.slug));
+
+    return {
+      key: `san-pham-${node.slug}`,
+      label: node.name,
+      path: children.length === 0
+        ? (parentSlug ? `/san-pham/${parentSlug}/${node.slug}` : `/san-pham/${node.slug}`)
+        : undefined,
+      children: children.length > 0 ? children : undefined,
+    };
+  };
+
+  return nodes
+    .filter((node) => node.id > 0 && node.slug)
+    .map((node) => mapNode(node));
+}
 
 export function NavMenu({
   layout = 'sidebar',
@@ -14,8 +36,45 @@ export function NavMenu({
   activeKey,
 }: NavMenuProps) {
   const { openKeys, toggleOpen, isItemActive, setOpenKeys } = useNavMenu(defaultOpenKeys, activeKey);
+  const [productCategories, setProductCategories] = useState<CategoryNode[]>([]);
 
   const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCategories = async () => {
+      try {
+        const categoryTree = await listCatalogCategoriesTree();
+        if (!isMounted) return;
+        setProductCategories(categoryTree.filter((item) => item.id > 0 && item.slug));
+      } catch {
+        if (!isMounted) return;
+        setProductCategories([]);
+      }
+    };
+
+    void loadCategories();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const items = useMemo(() => {
+    const productChildren = mapCategoryTreeToNavItems(productCategories);
+
+    return mainNavItems.map((item) => {
+      if (item.key !== 'san-pham') {
+        return item;
+      }
+
+      return {
+        ...item,
+        disabled: productChildren.length === 0,
+        children: productChildren,
+      };
+    });
+  }, [productCategories]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -109,8 +168,24 @@ export function NavMenu({
           layout === 'topbar' && level === 0 ? 'flex items-center' : '',
           layout === 'sidebar' && level > 0 ? 'mt-1' : ''
         )}
-        onMouseEnter={hasChildren && layout === 'topbar' ? () => setOpenKeys([item.key]) : undefined}
-        onMouseLeave={hasChildren && layout === 'topbar' ? () => setOpenKeys([]) : undefined}
+        onMouseEnter={
+          hasChildren && layout === 'topbar'
+            ? () => {
+                setOpenKeys((prev) => {
+                  const next = prev.slice(0, level);
+                  next[level] = item.key;
+                  return next;
+                });
+              }
+            : undefined
+        }
+        onMouseLeave={
+          hasChildren && layout === 'topbar'
+            ? () => {
+                setOpenKeys((prev) => prev.slice(0, level));
+              }
+            : undefined
+        }
       >
         {isLeafWithLink ? (
           <NavLink
@@ -165,10 +240,11 @@ export function NavMenu({
           </div>
         )}
 
-        {hasChildren && layout === 'topbar' && level === 0 && (
+        {hasChildren && layout === 'topbar' && (
           <div
             className={cn(
-              'absolute left-0 top-full z-50 min-w-[240px] origin-top rounded-md border border-slate-600 bg-slate-900 text-slate-100 shadow-lg',
+              'absolute z-50 min-w-[240px] origin-top rounded-md border border-slate-600 bg-slate-900 text-slate-100 shadow-lg',
+              level === 0 ? 'left-0 top-full mt-1' : 'left-full top-0 ml-1',
               'transition-all duration-200',
               isOpen ? 'pointer-events-auto scale-y-100 opacity-100' : 'pointer-events-none scale-y-0 opacity-0'
             )}

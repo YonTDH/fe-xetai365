@@ -2,48 +2,54 @@ import { useState, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 import type { NavItem } from './types'
 
+function hasMatchingPath(item: NavItem, pathname: string): boolean {
+  if (item.path) {
+    if (item.path === '/') {
+      if (pathname === '/') return true
+    } else if (pathname === item.path || pathname.startsWith(`${item.path}/`)) {
+      return true
+    }
+  }
+
+  if (!item.children || item.children.length === 0) {
+    return false
+  }
+
+  return item.children.some((child) => hasMatchingPath(child, pathname))
+}
+
+function hasMatchingKey(item: NavItem, key: string): boolean {
+  if (item.key === key) {
+    return true
+  }
+
+  if (!item.children || item.children.length === 0) {
+    return false
+  }
+
+  return item.children.some((child) => hasMatchingKey(child, key))
+}
+
 export function useNavMenu(defaultOpenKeys: string[] = [], externalActiveKey?: string) {
   const [openKeys, setOpenKeys] = useState<string[]>(defaultOpenKeys)
   const location = useLocation()
 
   const toggleOpen = useCallback((key: string) => {
     setOpenKeys((prev) => {
-      // Accordion style: only 1 parent open at a time
       if (prev.includes(key)) {
-        return []
+        return prev.filter((item) => item !== key)
       } else {
-        return [key]
+        return [...prev, key]
       }
     })
   }, [])
 
   const isItemActive = useCallback((item: NavItem): boolean => {
     if (externalActiveKey !== undefined) {
-      if (item.key === externalActiveKey) return true
-      if (item.children?.some(child => child.key === externalActiveKey)) return true
-      return false
+      return hasMatchingKey(item, externalActiveKey)
     }
-    
-    if (item.path) {
-      if (item.path === '/') {
-        return location.pathname === '/'
-      }
-      if (location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)) {
-        return true
-      }
-    }
-    
-    if (item.children) {
-      return item.children.some(child => {
-        if (child.path) {
-          if (child.path === '/') return location.pathname === '/'
-          return location.pathname === child.path || location.pathname.startsWith(`${child.path}/`)
-        }
-        return false
-      })
-    }
-    
-    return false
+
+    return hasMatchingPath(item, location.pathname)
   }, [externalActiveKey, location.pathname])
 
   return {
