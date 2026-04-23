@@ -36,6 +36,14 @@ export type CategoryNode = {
   children: CategoryNode[];
 };
 
+export function getCategoryDisplayName(slug: string, rawName = '') {
+  return rawName.trim() || slug;
+}
+
+export function isSummaryCategorySlug(slug: string) {
+  return slug.trim().toLowerCase().startsWith('tong-hop-');
+}
+
 function toSafeString(value: unknown) {
   return typeof value === 'string' ? value : '';
 }
@@ -68,12 +76,25 @@ function mapNews(item: Record<string, unknown>): LandingNewsItem {
 
 function mapCategoryNode(item: Record<string, unknown>): CategoryNode {
   const rawChildren = Array.isArray(item.children) ? item.children : [];
+  const slug = toSafeString(item.slug);
+  const rawName = toSafeString(item.name);
+  const name = getCategoryDisplayName(slug, rawName);
+
   return {
     id: toSafeNumber(item.id),
-    slug: toSafeString(item.slug),
-    name: toSafeString(item.name),
+    slug,
+    name,
     children: rawChildren.map((child) => mapCategoryNode(child as Record<string, unknown>)),
   };
+}
+
+function removeSummaryNodes(nodes: CategoryNode[]): CategoryNode[] {
+  return nodes
+    .filter((node) => !isSummaryCategorySlug(node.slug))
+    .map((node) => ({
+      ...node,
+      children: removeSummaryNodes(node.children),
+    }));
 }
 
 export async function getLandingHomeData(): Promise<LandingHomeData> {
@@ -116,7 +137,7 @@ export async function listCatalogCategoriesTree(): Promise<CategoryNode[]> {
     throw new Error(data.message || 'Khong the tai danh muc.');
   }
 
-  return (data.data || []).map(mapCategoryNode);
+  return removeSummaryNodes((data.data || []).map(mapCategoryNode));
 }
 
 export async function listProductsByCategory(categorySlug: string, limit = 12): Promise<LandingProduct[]> {
@@ -141,3 +162,4 @@ export async function listProductsByCategory(categorySlug: string, limit = 12): 
 
   return (data.data?.items || []).map(mapProduct);
 }
+

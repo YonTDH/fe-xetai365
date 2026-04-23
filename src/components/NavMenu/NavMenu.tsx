@@ -5,7 +5,8 @@ import { cn } from '@/lib/utils';
 import type { NavMenuProps, NavItem } from './types';
 import { mainNavItems } from './navMenu.mock';
 import { useNavMenu } from './useNavMenu';
-import { listCatalogCategoriesTree, type CategoryNode } from '@/api/landingApi';
+import { getCategoryDisplayName, listCatalogCategoriesTree, type CategoryNode } from '@/api/landingApi';
+import { listRecruitments, type BulletinItem } from '@/api/bulletinsApi';
 
 function mapCategoryTreeToNavItems(nodes: CategoryNode[]): NavItem[] {
   const mapNode = (node: CategoryNode, parentSlug?: string): NavItem => {
@@ -15,7 +16,7 @@ function mapCategoryTreeToNavItems(nodes: CategoryNode[]): NavItem[] {
 
     return {
       key: `san-pham-${node.slug}`,
-      label: node.name,
+      label: getCategoryDisplayName(node.slug, node.name),
       path: children.length === 0
         ? (parentSlug ? `/san-pham/${parentSlug}/${node.slug}` : `/san-pham/${node.slug}`)
         : undefined,
@@ -37,8 +38,17 @@ export function NavMenu({
 }: NavMenuProps) {
   const { openKeys, toggleOpen, isItemActive, setOpenKeys } = useNavMenu(defaultOpenKeys, activeKey);
   const [productCategories, setProductCategories] = useState<CategoryNode[]>([]);
+  const [recruitmentBulletins, setRecruitmentBulletins] = useState<BulletinItem[]>([]);
 
   const menuRef = useRef<HTMLDivElement>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearCloseTimer = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -60,25 +70,60 @@ export function NavMenu({
     };
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadRecruitments = async () => {
+      try {
+        const items = await listRecruitments(8);
+        if (!isMounted) return;
+        setRecruitmentBulletins(items);
+      } catch {
+        if (!isMounted) return;
+        setRecruitmentBulletins([]);
+      }
+    };
+
+    void loadRecruitments();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const items = useMemo(() => {
     const productChildren = mapCategoryTreeToNavItems(productCategories);
+    const recruitmentChildren: NavItem[] = recruitmentBulletins
+      .filter((item) => item.id > 0 && item.slug)
+      .map((item) => ({
+        key: `tuyen-dung-${item.id}`,
+        label: item.title,
+        path: `/tuyen-dung/${item.slug}.html`,
+      }));
 
     return mainNavItems.map((item) => {
-      if (item.key !== 'san-pham') {
-        return item;
+      if (item.key === 'san-pham') {
+        return {
+          ...item,
+          disabled: productChildren.length === 0,
+          children: productChildren,
+        };
       }
 
-      return {
-        ...item,
-        disabled: productChildren.length === 0,
-        children: productChildren,
-      };
+      if (item.key === 'tuyen-dung') {
+        return {
+          ...item,
+          children: recruitmentChildren.length > 0 ? recruitmentChildren : undefined,
+        };
+      }
+
+      return item;
     });
-  }, [productCategories]);
+  }, [productCategories, recruitmentBulletins]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && layout === 'topbar') {
+        clearCloseTimer();
         setOpenKeys([]);
       }
     };
@@ -89,12 +134,19 @@ export function NavMenu({
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (layout === 'topbar' && menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        clearCloseTimer();
         setOpenKeys([]);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [layout, setOpenKeys]);
+
+  useEffect(() => {
+    return () => {
+      clearCloseTimer();
+    };
+  }, []);
 
   const renderItem = (item: NavItem, level = 0) => {
     if (item.hidden) return null;
@@ -110,9 +162,25 @@ export function NavMenu({
       }
 
       if (hasChildren) {
-        e.preventDefault();
         if (layout === 'sidebar') {
+          e.preventDefault();
           toggleOpen(item.key);
+          return;
+        }
+
+        if (!item.path) {
+          e.preventDefault();
+          return;
+        }
+
+        if (onItemClick) {
+          onItemClick(item);
+        }
+        if (item.onClick) {
+          item.onClick();
+        }
+        if (layout === 'topbar') {
+          setOpenKeys([]);
         }
       } else {
         if (onItemClick) {
@@ -158,7 +226,7 @@ export function NavMenu({
     );
 
     const titleValue = collapsed && level === 0 ? item.label : undefined;
-    const isLeafWithLink = item.path && !hasChildren && !item.disabled;
+    const isRenderableLink = Boolean(item.path) && !item.disabled && !(layout === 'sidebar' && hasChildren);
 
     return (
       <div
@@ -171,6 +239,7 @@ export function NavMenu({
         onMouseEnter={
           hasChildren && layout === 'topbar'
             ? () => {
+                clearCloseTimer();
                 setOpenKeys((prev) => {
                   const next = prev.slice(0, level);
                   next[level] = item.key;
@@ -182,12 +251,15 @@ export function NavMenu({
         onMouseLeave={
           hasChildren && layout === 'topbar'
             ? () => {
-                setOpenKeys((prev) => prev.slice(0, level));
+                clearCloseTimer();
+                closeTimerRef.current = setTimeout(() => {
+                  setOpenKeys((prev) => prev.slice(0, level));
+                }, 120);
               }
             : undefined
         }
       >
-        {isLeafWithLink ? (
+        {isRenderableLink ? (
           <NavLink
             to={item.path as string}
             end={item.path === '/'}
@@ -244,10 +316,11 @@ export function NavMenu({
           <div
             className={cn(
               'absolute z-50 min-w-[240px] origin-top rounded-md border border-slate-600 bg-slate-900 text-slate-100 shadow-lg',
-              level === 0 ? 'left-0 top-full mt-1' : 'left-full top-0 ml-1',
+              level === 0 ? 'left-0 top-full' : 'left-full top-0',
               'transition-all duration-200',
               isOpen ? 'pointer-events-auto scale-y-100 opacity-100' : 'pointer-events-none scale-y-0 opacity-0'
             )}
+            onMouseEnter={clearCloseTimer}
           >
             <div className="flex flex-col gap-0.5 p-1">{item.children!.map((child) => renderItem(child, level + 1))}</div>
           </div>

@@ -1,7 +1,13 @@
 import topProductImg from '@/assets/lading-page/top-product.png';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { listProductsByCategory, type CategoryNode, type LandingProduct } from '@/api/landingApi';
+import {
+  getCategoryDisplayName,
+  isSummaryCategorySlug,
+  listProductsByCategory,
+  type CategoryNode,
+  type LandingProduct,
+} from '@/api/landingApi';
 
 type CategoriesSectionProps = {
   categories: CategoryNode[];
@@ -11,7 +17,7 @@ type CategoriesSectionProps = {
 export function CategoriesSection({ categories, hotline }: CategoriesSectionProps) {
   const rootCategories = useMemo(() => categories.filter((item) => item.id > 0), [categories]);
   const [activeCategory, setActiveCategory] = useState('');
-  const [activeBrand, setActiveBrand] = useState<string | null>(null);
+  const [activeLevel2Category, setActiveLevel2Category] = useState('');
   const [products, setProducts] = useState<LandingProduct[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -20,6 +26,7 @@ export function CategoriesSection({ categories, hotline }: CategoriesSectionProp
   useEffect(() => {
     if (rootCategories.length === 0) {
       setActiveCategory('');
+      setActiveLevel2Category('');
       setProducts([]);
       return;
     }
@@ -30,8 +37,34 @@ export function CategoriesSection({ categories, hotline }: CategoriesSectionProp
     }
   }, [rootCategories, activeCategory]);
 
+  const activeRootCategory = useMemo(
+    () => rootCategories.find((item) => item.slug === activeCategory) || null,
+    [rootCategories, activeCategory]
+  );
+
+  const level2Categories = useMemo(
+    () => (activeRootCategory?.children || []).filter((item) => item.id > 0 && item.slug && !isSummaryCategorySlug(item.slug)),
+    [activeRootCategory]
+  );
+
   useEffect(() => {
-    if (!activeCategory) {
+    if (level2Categories.length === 0) {
+      if (activeLevel2Category) {
+        setActiveLevel2Category('');
+      }
+      return;
+    }
+
+    const exists = level2Categories.some((item) => item.slug === activeLevel2Category);
+    if (!exists) {
+      setActiveLevel2Category('');
+    }
+  }, [level2Categories, activeLevel2Category]);
+
+  useEffect(() => {
+    const targetCategorySlug = activeLevel2Category || activeCategory;
+
+    if (!targetCategorySlug) {
       setProducts([]);
       return;
     }
@@ -40,7 +73,7 @@ export function CategoriesSection({ categories, hotline }: CategoriesSectionProp
     const loadProducts = async () => {
       try {
         setIsLoading(true);
-        const items = await listProductsByCategory(activeCategory, 20);
+        const items = await listProductsByCategory(targetCategorySlug, 20);
         if (!isMounted) return;
         setProducts(items);
       } catch {
@@ -54,28 +87,11 @@ export function CategoriesSection({ categories, hotline }: CategoriesSectionProp
     };
 
     void loadProducts();
-    setActiveBrand(null);
 
     return () => {
       isMounted = false;
     };
-  }, [activeCategory]);
-
-  const brands = useMemo(() => {
-    const brandSet = new Set(
-      products
-        .map((item) => item.brand.trim())
-        .filter((item) => item.length > 0)
-    );
-    return Array.from(brandSet);
-  }, [products]);
-
-  const visibleProducts = useMemo(() => {
-    if (!activeBrand) {
-      return products;
-    }
-    return products.filter((item) => item.brand === activeBrand);
-  }, [products, activeBrand]);
+  }, [activeCategory, activeLevel2Category]);
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -89,65 +105,78 @@ export function CategoriesSection({ categories, hotline }: CategoriesSectionProp
 
   const handleCategoryChange = (slug: string) => {
     setActiveCategory(slug);
-    setActiveBrand(null);
+    setActiveLevel2Category('');
   };
 
   return (
     <section className="py-12 bg-white">
       <div className="container mx-auto px-4">
         <div className="flex flex-col border-b-2 border-[#FFD600] mb-8">
-          <div className="flex items-end gap-0">
-            {rootCategories.map((cat) => {
-              const isActive = activeCategory === cat.slug;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => handleCategoryChange(cat.slug)}
-                  className={[
-                    'relative font-bold uppercase py-1.5 md:py-3 px-3 md:px-5 text-xs md:text-base transition-all duration-200 select-none outline-none whitespace-nowrap',
-                    'focus-visible:ring-2 focus-visible:ring-[#FFD600]',
-                    isActive
-                      ? 'bg-[#FFD600] text-black z-10'
-                      : 'bg-white text-gray-500 hover:text-black hover:bg-[#FFF8CC]',
-                  ].join(' ')}
-                  style={
-                    isActive
-                      ? {
-                        clipPath:
-                          'polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%)',
-                        paddingRight: '28px',
-                        marginBottom: '-2px',
+          <div className="flex flex-col gap-3 pb-2 lg:flex-row lg:items-end lg:justify-between">
+            <div className="overflow-x-auto">
+              <div className="flex items-end gap-0 min-w-max">
+                {rootCategories.map((cat) => {
+                  const isActive = activeCategory === cat.slug;
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => handleCategoryChange(cat.slug)}
+                      className={[
+                        'relative font-bold uppercase py-1.5 md:py-2.5 px-3 md:px-4 text-[11px] md:text-sm transition-all duration-200 select-none outline-none whitespace-nowrap',
+                        'focus-visible:ring-2 focus-visible:ring-[#FFD600]',
+                        isActive
+                          ? 'bg-[#FFD600] text-black z-10'
+                          : 'bg-white text-gray-500 hover:text-black hover:bg-[#FFF8CC]',
+                      ].join(' ')}
+                      style={
+                        isActive
+                          ? {
+                            clipPath:
+                              'polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%)',
+                            paddingRight: '28px',
+                            marginBottom: '-2px',
+                          }
+                          : undefined
                       }
-                      : undefined
-                  }
-                >
-                  {cat.name}
-                </button>
-              );
-            })}
-          </div>
+                    >
+                      {getCategoryDisplayName(cat.slug, cat.name)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-          <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden py-2">
-            <div className="flex items-center gap-4 md:gap-8 min-w-max">
-              {brands.map((brand) => {
-                const isActive = activeBrand === brand;
-                return (
-                  <button
-                    key={brand}
-                    onClick={() =>
-                      setActiveBrand((prev) => (prev === brand ? null : brand))
-                    }
-                    className={[
-                      'text-xs md:text-base font-semibold uppercase transition-colors duration-150 outline-none whitespace-nowrap',
-                      isActive
-                        ? 'text-[#c8a800] underline underline-offset-4'
-                        : 'text-gray-600 hover:text-black',
-                    ].join(' ')}
-                  >
-                    {brand}
-                  </button>
-                );
-              })}
+            <div className="overflow-x-auto lg:max-w-[58%]">
+              <div className="flex items-center gap-4 md:gap-6 min-w-max lg:justify-end">
+                <button
+                  onClick={() => setActiveLevel2Category('')}
+                  className={[
+                    'text-[11px] md:text-sm font-semibold uppercase transition-colors duration-150 outline-none whitespace-nowrap',
+                    activeLevel2Category.length === 0
+                      ? 'text-[#c8a800] underline underline-offset-4'
+                      : 'text-gray-600 hover:text-black',
+                  ].join(' ')}
+                >
+                  {'T\u1ea4T C\u1ea2'}
+                </button>
+                {level2Categories.map((level2) => {
+                  const isActive = activeLevel2Category === level2.slug;
+                  return (
+                    <button
+                      key={level2.id}
+                      onClick={() => setActiveLevel2Category(level2.slug)}
+                      className={[
+                        'text-[11px] md:text-sm font-semibold uppercase transition-colors duration-150 outline-none whitespace-nowrap',
+                        isActive
+                          ? 'text-[#c8a800] underline underline-offset-4'
+                          : 'text-gray-600 hover:text-black',
+                      ].join(' ')}
+                    >
+                      {getCategoryDisplayName(level2.slug, level2.name)}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -163,9 +192,9 @@ export function CategoriesSection({ categories, hotline }: CategoriesSectionProp
 
           <div
             ref={scrollRef}
-            className="flex overflow-x-auto gap-4 md:gap-6 pb-6 snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="flex overflow-x-auto gap-4 md:gap-6 pb-6 snap-x snap-mandatory scroll-smooth"
           >
-            {visibleProducts.map((product) => (
+            {products.map((product) => (
               <div
                 key={product.id}
                 className="w-[85%] md:w-[calc(40%-16px)] lg:w-[calc(28.57%-18px)] shrink-0 snap-start border border-gray-200 bg-white flex flex-col hover:shadow-xl transition-all duration-300"
@@ -186,15 +215,15 @@ export function CategoriesSection({ categories, hotline }: CategoriesSectionProp
                   </div>
                   <div className="bg-[#F5F5F5] p-3 md:p-4 border-t border-white">
                     <p className="text-sm font-semibold text-gray-700">
-                      Lien he: {safeHotline}
+                      {'Li\u00ean h\u1ec7'}: {safeHotline}
                     </p>
                   </div>
                 </div>
               </div>
             ))}
 
-            {!isLoading && visibleProducts.length === 0 && (
-              <p className="text-sm text-slate-500">Khong co san pham trong danh muc nay.</p>
+            {!isLoading && products.length === 0 && (
+              <p className="text-sm text-slate-500">{'Kh\u00f4ng c\u00f3 s\u1ea3n ph\u1ea9m trong danh m\u1ee5c n\u00e0y.'}</p>
             )}
           </div>
 
