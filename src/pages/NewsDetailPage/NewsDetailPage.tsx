@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,7 @@ export function NewsDetailPage() {
 
   const normalizedIdOrSlug = useMemo(() => normalizeIdOrSlug(idOrSlug), [idOrSlug]);
 
-  const loadDetail = async () => {
+  const loadDetail = useCallback(async () => {
     try {
       setIsLoading(true);
       setError('');
@@ -36,7 +36,7 @@ export function NewsDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [normalizedIdOrSlug]);
 
   useEffect(() => {
     if (!normalizedIdOrSlug) {
@@ -44,7 +44,7 @@ export function NewsDetailPage() {
       return;
     }
     void loadDetail();
-  }, [normalizedIdOrSlug]);
+  }, [loadDetail, normalizedIdOrSlug]);
 
   return (
     <section className="bg-slate-50 py-8 md:py-12">

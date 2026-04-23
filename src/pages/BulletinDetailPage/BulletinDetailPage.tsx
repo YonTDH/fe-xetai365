@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getBulletinDetail, type BulletinItem } from '@/api/bulletinsApi';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
 
 function formatDate(value: string | null) {
   if (!value) return '';
@@ -37,8 +38,9 @@ export function BulletinDetailPage({ sectionLabel, backPath }: BulletinDetailPag
   const normalizedIdOrSlug = useMemo(() => normalizeIdOrSlug(idOrSlug), [idOrSlug]);
   const contentHasHtml = useMemo(() => hasHtmlContent(item?.content || ''), [item?.content]);
   const contentHasImage = useMemo(() => hasImageTag(item?.content || ''), [item?.content]);
+  const sanitizedContent = useMemo(() => sanitizeHtml(item?.content || ''), [item?.content]);
 
-  const loadDetail = async () => {
+  const loadDetail = useCallback(async () => {
     try {
       setIsLoading(true);
       setError('');
@@ -51,7 +53,7 @@ export function BulletinDetailPage({ sectionLabel, backPath }: BulletinDetailPag
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [normalizedIdOrSlug]);
 
   useEffect(() => {
     if (!normalizedIdOrSlug) {
@@ -59,7 +61,7 @@ export function BulletinDetailPage({ sectionLabel, backPath }: BulletinDetailPag
       return;
     }
     void loadDetail();
-  }, [normalizedIdOrSlug]);
+  }, [loadDetail, normalizedIdOrSlug]);
 
   return (
     <section className="bg-slate-50 py-8 md:py-12">
@@ -108,7 +110,7 @@ export function BulletinDetailPage({ sectionLabel, backPath }: BulletinDetailPag
               contentHasHtml ? (
                 <div
                   className="prose prose-slate mt-5 max-w-none text-sm leading-relaxed md:text-base [&_img]:mx-auto [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-md"
-                  dangerouslySetInnerHTML={{ __html: item.content }}
+                  dangerouslySetInnerHTML={{ __html: sanitizedContent }}
                 />
               ) : (
                 <div className="mt-5 whitespace-pre-line text-sm leading-relaxed text-slate-700 md:text-base">{item.content}</div>

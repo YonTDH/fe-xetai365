@@ -17,7 +17,7 @@ export default function AppRoutes() {
         <Route path="/tin-tuc" element={<NewsPage />} />
         <Route path="/tin-tuc/:idOrSlug" element={<NewsDetailPage />} />
         <Route path="/khuyen-mai" element={<PromotionPage />} />
-        <Route path="/khuyen-mai/:idOrSlug" element={<BulletinDetailPage sectionLabel="Khuyến mãi" />} />
+        <Route path="/khuyen-mai/:idOrSlug" element={<BulletinDetailPage sectionLabel="Khuyến mãi" backPath="/khuyen-mai" />} />
         <Route path="/lien-he" element={<ContactPage />} />
       </Route>
     </Routes>
