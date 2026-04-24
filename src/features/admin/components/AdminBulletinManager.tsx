@@ -324,6 +324,8 @@ export function AdminBulletinManager({ type, heading, description }: AdminBullet
               <select
                 value={form.status}
                 onChange={(e) => handleChange('status', e.target.value as AdminBulletinStatus)}
+                aria-label="Trạng thái bài viết"
+                title="Trạng thái bài viết"
                 className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-primary-500"
               >
                 {statusOptions.map((option) => (

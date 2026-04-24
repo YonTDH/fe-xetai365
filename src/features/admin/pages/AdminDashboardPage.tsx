@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AdminBulletinManager } from '../components/AdminBulletinManager';
+import { AdminCategoryLevel1Manager } from '../components/AdminCategoryLevel1Manager';
 import { AdminHeader } from '../components/AdminHeader';
 import { AdminPlaceholderPanel } from '../components/AdminPlaceholderPanel';
 import { AdminSidebar } from '../components/AdminSidebar';
@@ -87,6 +88,8 @@ export function AdminDashboardPage() {
         <main className="p-4 md:p-6 xl:p-6">
           <AdminHeader title={pageTitle} description={activeMeta.description} user={user} onLogout={handleLogout} />
 
+          {activeSection === 'product-category-level-1' && <AdminCategoryLevel1Manager />}
+
           {activeSection === 'news' && (
             <AdminBulletinManager
               type="news_event"
@@ -111,7 +114,9 @@ export function AdminDashboardPage() {
             />
           )}
 
-          {!['news', 'recruitment', 'promotion'].includes(activeSection) && <AdminPlaceholderPanel section={activeSection} />}
+          {!['product-category-level-1', 'news', 'recruitment', 'promotion'].includes(activeSection) && (
+            <AdminPlaceholderPanel section={activeSection} />
+          )}
         </main>
       </div>
     </section>
