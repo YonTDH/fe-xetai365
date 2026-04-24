@@ -279,15 +279,14 @@ export function NavMenu({
               isOpen={isOpen}
             />
           </NavLink>
-        ) : (
-          <div
-            role={hasChildren ? 'button' : 'menuitem'}
-            tabIndex={item.disabled ? -1 : 0}
+        ) : hasChildren && isOpen ? (
+          <button
+            type="button"
             className={itemClasses}
             onClick={handleItemClick}
-            onKeyDown={handleKeyDown}
             title={titleValue}
-            aria-expanded={hasChildren ? isOpen : undefined}
+            aria-expanded="true"
+            disabled={item.disabled}
           >
             <ItemContent
               item={item}
@@ -298,7 +297,44 @@ export function NavMenu({
               level={level}
               isOpen={isOpen}
             />
-          </div>
+          </button>
+        ) : hasChildren ? (
+          <button
+            type="button"
+            className={itemClasses}
+            onClick={handleItemClick}
+            title={titleValue}
+            aria-expanded="false"
+            disabled={item.disabled}
+          >
+            <ItemContent
+              item={item}
+              hasChildren={hasChildren}
+              active={active}
+              collapsed={collapsed}
+              layout={layout}
+              level={level}
+              isOpen={isOpen}
+            />
+          </button>
+        ) : (
+          <button
+            type="button"
+            className={itemClasses}
+            onClick={handleItemClick}
+            title={titleValue}
+            disabled={item.disabled}
+          >
+            <ItemContent
+              item={item}
+              hasChildren={hasChildren}
+              active={active}
+              collapsed={collapsed}
+              layout={layout}
+              level={level}
+              isOpen={isOpen}
+            />
+          </button>
         )}
 
         {hasChildren && layout === 'sidebar' && !collapsed && (
