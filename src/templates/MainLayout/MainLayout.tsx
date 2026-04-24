@@ -36,7 +36,7 @@ export function MainLayout() {
       <div className="sticky top-0 z-50 border-b border-slate-300 bg-white/95 backdrop-blur-sm transition-all">
         <div className="hidden border-b border-slate-700 bg-navy-900 shadow-card lg:block">
           <div className="container mx-auto px-4 py-1.5">
-            <div className="rounded-lg bg-transparent px-2">
+            <div className="flex justify-center rounded-lg bg-transparent px-2">
               <NavMenu layout="topbar" />
             </div>
           </div>

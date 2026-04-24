@@ -1,0 +1,1 @@
+export { BulletinListPage } from './BulletinListPage';

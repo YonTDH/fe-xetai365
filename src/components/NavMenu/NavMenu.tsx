@@ -6,7 +6,6 @@ import type { NavMenuProps, NavItem } from './types';
 import { mainNavItems } from './navMenu.mock';
 import { useNavMenu } from './useNavMenu';
 import { getCategoryDisplayName, listCatalogCategoriesTree, type CategoryNode } from '@/api/landingApi';
-import { listRecruitments, type BulletinItem } from '@/api/bulletinsApi';
 
 function mapCategoryTreeToNavItems(nodes: CategoryNode[]): NavItem[] {
   const getCategoryPath = (slug: string, parentSlug?: string) =>
@@ -49,7 +48,6 @@ export function NavMenu({
 }: NavMenuProps) {
   const { openKeys, toggleOpen, isItemActive, setOpenKeys } = useNavMenu(defaultOpenKeys, activeKey);
   const [productCategories, setProductCategories] = useState<CategoryNode[]>([]);
-  const [recruitmentBulletins, setRecruitmentBulletins] = useState<BulletinItem[]>([]);
 
   const menuRef = useRef<HTMLDivElement>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -81,35 +79,8 @@ export function NavMenu({
     };
   }, []);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadRecruitments = async () => {
-      try {
-        const items = await listRecruitments(8);
-        if (!isMounted) return;
-        setRecruitmentBulletins(items);
-      } catch {
-        if (!isMounted) return;
-        setRecruitmentBulletins([]);
-      }
-    };
-
-    void loadRecruitments();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
   const items = useMemo(() => {
     const productChildren = mapCategoryTreeToNavItems(productCategories);
-    const recruitmentChildren: NavItem[] = recruitmentBulletins
-      .filter((item) => item.id > 0 && item.slug)
-      .map((item) => ({
-        key: `tuyen-dung-${item.id}`,
-        label: item.title,
-        path: `/tuyen-dung/${item.slug}.html`,
-      }));
 
     return mainNavItems.map((item) => {
       if (item.key === 'san-pham') {
@@ -127,16 +98,9 @@ export function NavMenu({
         };
       }
 
-      if (item.key === 'tuyen-dung') {
-        return {
-          ...item,
-          children: recruitmentChildren.length > 0 ? recruitmentChildren : undefined,
-        };
-      }
-
       return item;
     });
-  }, [productCategories, recruitmentBulletins]);
+  }, [productCategories]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -390,7 +354,7 @@ export function NavMenu({
       ref={menuRef}
       className={cn(
         'flex',
-        layout === 'sidebar' ? 'min-w-[60px] flex-col gap-1' : 'flex-row items-center gap-1.5',
+        layout === 'sidebar' ? 'min-w-[60px] flex-col gap-1' : 'w-full flex-row items-center justify-center gap-1.5',
         collapsed && layout === 'sidebar' ? 'w-[60px]' : 'w-full'
       )}
     >

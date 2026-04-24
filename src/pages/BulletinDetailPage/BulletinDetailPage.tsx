@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getBulletinDetail, type BulletinItem } from '@/api/bulletinsApi';
@@ -26,10 +26,9 @@ function hasImageTag(value: string) {
 
 type BulletinDetailPageProps = {
   sectionLabel: string;
-  backPath: string;
 };
 
-export function BulletinDetailPage({ sectionLabel, backPath }: BulletinDetailPageProps) {
+export function BulletinDetailPage({ sectionLabel }: BulletinDetailPageProps) {
   const { idOrSlug = '' } = useParams();
   const [item, setItem] = useState<BulletinItem | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -71,12 +70,6 @@ export function BulletinDetailPage({ sectionLabel, backPath }: BulletinDetailPag
             {sectionLabel}
             <span className="absolute right-0 top-0 h-0 w-0 border-b-[20px] border-l-[14px] border-t-[20px] border-b-transparent border-l-[#FFD600] border-t-transparent md:border-b-[24px] md:border-l-[16px] md:border-t-[24px]" />
           </h1>
-        </div>
-
-        <div className="mb-4">
-          <Link to={backPath} className="text-sm font-medium text-primary-700 hover:text-primary-800">
-            ← Quay lại danh sách
-          </Link>
         </div>
 
         {isLoading && <p className="text-sm text-slate-600">Đang tải chi tiết bài viết...</p>}
