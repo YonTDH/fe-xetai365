@@ -124,8 +124,8 @@
   }
 
   *::selection {
-    background-color: #ffffff !important;
-    color: #000000 !important;
+    background-color: #2563eb !important;
+    color: #ffffff !important;
     text-shadow: none;
   }
 

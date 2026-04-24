@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import topProductImg from '@/assets/lading-page/top-product.png';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   listCatalogCategoriesTree,
+  listProducts,
   listProductsByCategory,
   type CategoryNode,
   type LandingProduct,
@@ -35,33 +36,29 @@ export function ProductCategoryPage() {
   const selectedSlug = useMemo(() => (child || slug).trim(), [child, slug]);
 
   const categoryLabel = useMemo(() => {
-    if (!selectedSlug) return 'Sản phẩm';
+    if (!selectedSlug) return 'Tất cả sản phẩm';
     return resolveCategoryLabelBySlug(categoryTree, selectedSlug) || selectedSlug;
   }, [categoryTree, selectedSlug]);
 
   const breadcrumbLabel = useMemo(() => {
     if (parent && child) {
-      return `${parent} / ${child}`;
+      const parentLabel = resolveCategoryLabelBySlug(categoryTree, parent) || parent;
+      const childLabel = resolveCategoryLabelBySlug(categoryTree, child) || child;
+      return `${parentLabel} / ${childLabel}`;
     }
     if (slug) {
-      return slug;
+      return resolveCategoryLabelBySlug(categoryTree, slug) || slug;
     }
-    return 'san-pham';
-  }, [parent, child, slug]);
+    return 'tat-ca';
+  }, [categoryTree, parent, child, slug]);
 
   const loadData = useCallback(async () => {
-    if (!selectedSlug) {
-      setError('Đường dẫn danh mục không hợp lệ.');
-      setProducts([]);
-      return;
-    }
-
     try {
       setIsLoading(true);
       setError('');
       const [tree, items] = await Promise.all([
         listCatalogCategoriesTree(),
-        listProductsByCategory(selectedSlug, 30),
+        selectedSlug ? listProductsByCategory(selectedSlug, 30) : listProducts(30),
       ]);
       setCategoryTree(tree);
       setProducts(items);
@@ -114,7 +111,11 @@ export function ProductCategoryPage() {
         {!isLoading && !error && products.length > 0 && (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {products.map((product) => (
-              <article key={product.id} className="overflow-hidden border border-slate-300 bg-white shadow-card">
+              <Link
+                key={product.id}
+                to={`/san-pham/chi-tiet/${product.slug}`}
+                className="overflow-hidden border border-slate-300 bg-white shadow-card transition-shadow hover:shadow-xl"
+              >
                 <div className="aspect-square overflow-hidden bg-slate-100">
                   <img
                     src={product.imageUrl || topProductImg}
@@ -130,7 +131,7 @@ export function ProductCategoryPage() {
                     <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-slate-700">{product.shortDescription}</p>
                   )}
                 </div>
-              </article>
+              </Link>
             ))}
           </div>
         )}

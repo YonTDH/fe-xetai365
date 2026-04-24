@@ -1,6 +1,7 @@
 import topProductImg from '@/assets/lading-page/top-product.png';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRef } from 'react';
+import { Link } from 'react-router-dom';
 import type { LandingProduct } from '@/api/landingApi';
 
 type FeaturesSectionProps = {
@@ -52,8 +53,9 @@ export function FeaturesSection({ products, hotline }: FeaturesSectionProps) {
             className="flex overflow-x-auto gap-4 md:gap-6 pb-6 snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             {products.map((product) => (
-              <div
+              <Link
                 key={product.id}
+                to={`/san-pham/chi-tiet/${product.slug}`}
                 className="w-[85%] md:w-[calc(40%-16px)] lg:w-[calc(28.57%-18px)] shrink-0 snap-start border border-gray-200 bg-white flex flex-col hover:shadow-xl transition-all duration-300"
               >
                 <div className="aspect-square relative overflow-hidden shrink-0 cursor-pointer">
@@ -76,7 +78,7 @@ export function FeaturesSection({ products, hotline }: FeaturesSectionProps) {
                     </p>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
 

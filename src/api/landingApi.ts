@@ -9,6 +9,33 @@ export type LandingProduct = {
   imageUrl: string;
 };
 
+export type ProductImage = string | {
+  url?: string;
+  src?: string;
+  alt?: string;
+};
+
+export type ProductDetail = LandingProduct & {
+  sku: string;
+  msp: string;
+  categorySlug: string;
+  categoryName: string;
+  type: string;
+  condition: string;
+  year: number;
+  mileageKm: number;
+  fuelType: string;
+  transmission: string;
+  priceVnd: string;
+  status: string;
+  location: string;
+  content: string;
+  images: ProductImage[];
+  titleSeo: string;
+  keywords: string;
+  metaDescription: string;
+};
+
 export type LandingNewsItem = {
   id: number;
   slug: string;
@@ -61,6 +88,33 @@ function mapProduct(item: Record<string, unknown>): LandingProduct {
     brand: toSafeString(item.brand),
     shortDescription: toSafeString(item.shortDescription || item.short_description),
     imageUrl: toSafeString(item.imageUrl || item.image_url),
+  };
+}
+
+function mapProductDetail(item: Record<string, unknown>): ProductDetail {
+  const baseProduct = mapProduct(item);
+  const rawImages = Array.isArray(item.images) ? item.images : [];
+
+  return {
+    ...baseProduct,
+    sku: toSafeString(item.sku),
+    msp: toSafeString(item.msp),
+    categorySlug: toSafeString(item.categorySlug || item.category_slug),
+    categoryName: toSafeString(item.categoryName || item.category_name),
+    type: toSafeString(item.type),
+    condition: toSafeString(item.condition),
+    year: toSafeNumber(item.year),
+    mileageKm: toSafeNumber(item.mileageKm || item.mileage_km),
+    fuelType: toSafeString(item.fuelType || item.fuel_type),
+    transmission: toSafeString(item.transmission),
+    priceVnd: toSafeString(item.priceVnd || item.price_vnd),
+    status: toSafeString(item.status),
+    location: toSafeString(item.location),
+    content: toSafeString(item.content),
+    images: rawImages as ProductImage[],
+    titleSeo: toSafeString(item.titleSeo || item.title_seo),
+    keywords: toSafeString(item.keywords),
+    metaDescription: toSafeString(item.metaDescription || item.meta_description),
   };
 }
 
@@ -161,5 +215,42 @@ export async function listProductsByCategory(categorySlug: string, limit = 12): 
   }
 
   return (data.data?.items || []).map(mapProduct);
+}
+
+export async function listProducts(limit = 30): Promise<LandingProduct[]> {
+  const query = new URLSearchParams({
+    limit: String(limit),
+    page: '1',
+  });
+
+  const response = await fetch(buildApiUrl(`/api/catalog/products?${query.toString()}`));
+  const data = (await response.json().catch(() => ({}))) as {
+    success?: boolean;
+    data?: {
+      items?: Record<string, unknown>[];
+    };
+    message?: string;
+  };
+
+  if (!response.ok || data.success === false) {
+    throw new Error(data.message || 'Khong the tai san pham.');
+  }
+
+  return (data.data?.items || []).map(mapProduct);
+}
+
+export async function getProductDetail(idOrSlug: string): Promise<ProductDetail> {
+  const response = await fetch(buildApiUrl(`/api/catalog/products/${encodeURIComponent(idOrSlug)}`));
+  const data = (await response.json().catch(() => ({}))) as {
+    success?: boolean;
+    data?: Record<string, unknown>;
+    message?: string;
+  };
+
+  if (!response.ok || data.success === false || !data.data) {
+    throw new Error(data.message || 'Khong the tai chi tiet san pham.');
+  }
+
+  return mapProductDetail(data.data);
 }
 

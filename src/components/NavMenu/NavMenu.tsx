@@ -9,18 +9,29 @@ import { getCategoryDisplayName, listCatalogCategoriesTree, type CategoryNode } 
 import { listRecruitments, type BulletinItem } from '@/api/bulletinsApi';
 
 function mapCategoryTreeToNavItems(nodes: CategoryNode[]): NavItem[] {
+  const getCategoryPath = (slug: string, parentSlug?: string) =>
+    parentSlug ? `/san-pham/${parentSlug}/${slug}` : `/san-pham/${slug}`;
+
   const mapNode = (node: CategoryNode, parentSlug?: string): NavItem => {
     const children = node.children
       .filter((child) => child.id > 0 && child.slug)
       .map((child) => mapNode(child, node.slug));
+    const categoryPath = getCategoryPath(node.slug, parentSlug);
 
     return {
       key: `san-pham-${node.slug}`,
       label: getCategoryDisplayName(node.slug, node.name),
-      path: children.length === 0
-        ? (parentSlug ? `/san-pham/${parentSlug}/${node.slug}` : `/san-pham/${node.slug}`)
+      path: children.length === 0 ? categoryPath : undefined,
+      children: children.length > 0
+        ? [
+            {
+              key: `san-pham-${node.slug}-tat-ca`,
+              label: 'Tất cả',
+              path: categoryPath,
+            },
+            ...children,
+          ]
         : undefined,
-      children: children.length > 0 ? children : undefined,
     };
   };
 
@@ -105,7 +116,14 @@ export function NavMenu({
         return {
           ...item,
           disabled: productChildren.length === 0,
-          children: productChildren,
+          children: [
+            {
+              key: 'san-pham-tat-ca',
+              label: 'Tất cả',
+              path: '/san-pham',
+            },
+            ...productChildren,
+          ],
         };
       }
 
