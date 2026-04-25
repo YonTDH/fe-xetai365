@@ -9,8 +9,8 @@ type CategoryLevel1Row = {
   id: number;
   name: string;
   childCount: number;
+  isVisible: boolean;
   statusText: string;
-  productGroupText: string;
 };
 
 function mapCategoryToRow(item: CategoryNode): CategoryLevel1Row {
@@ -18,8 +18,8 @@ function mapCategoryToRow(item: CategoryNode): CategoryLevel1Row {
     id: item.id,
     name: item.name,
     childCount: item.children.length,
-    statusText: 'Đang hiển thị',
-    productGroupText: item.children.length > 0 ? item.children.map((child) => child.name).join(', ') : 'Chưa có danh mục con',
+    isVisible: item.isVisible,
+    statusText: item.isVisible ? 'Đang hiển thị' : 'Đang ẩn',
   };
 }
 
@@ -89,12 +89,7 @@ export function AdminCategoryLevel1Manager() {
         key: 'name',
         title: 'Tên danh mục',
         sortable: true,
-        render: (row) => <span className="font-semibold text-slate-900">{row.name}</span>,
-      },
-      {
-        key: 'productGroupText',
-        title: 'Danh mục con',
-        render: (row) => <span className="line-clamp-2 text-sm text-slate-600">{row.productGroupText}</span>,
+        render: (row) => <span className="text-slate-900">{row.name}</span>,
       },
       {
         key: 'childCount',
@@ -103,12 +98,34 @@ export function AdminCategoryLevel1Manager() {
         align: 'center',
       },
       {
+        key: 'isVisible',
+        title: 'Hiển thị',
+        align: 'center',
+        render: (row) => (
+          <input
+            type="checkbox"
+            aria-label={`Trạng thái hiển thị của danh mục ${row.name}`}
+            checked={row.isVisible}
+            readOnly
+            onClick={(event) => event.stopPropagation()}
+            className="h-4 w-4 rounded border-slate-300"
+          />
+        ),
+      },
+      {
         key: 'statusText',
         title: 'Trạng thái',
         sortable: true,
         align: 'center',
         render: (row) => (
-          <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
+          <Badge
+            variant="outline"
+            className={
+              row.isVisible
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                : 'border-slate-200 bg-slate-100 text-slate-600'
+            }
+          >
             {row.statusText}
           </Badge>
         ),
@@ -154,7 +171,7 @@ export function AdminCategoryLevel1Manager() {
         ),
       },
     ],
-    [selectedIds]
+    [allSelected, rows, selectedIds]
   );
 
   return (

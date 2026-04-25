@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { adminLogin, adminMe, clearAdminToken, getAdminToken } from '../api/adminApi';
+import { DEFAULT_ADMIN_SECTION, getAdminSectionPath } from '../config/menu';
 
 export function AdminLoginPage() {
   const navigate = useNavigate();
@@ -52,7 +53,7 @@ export function AdminLoginPage() {
       setIsLoggingIn(true);
       setLoginError('');
       await adminLogin(username, password);
-      navigate('/admin', { replace: true });
+      navigate(getAdminSectionPath(DEFAULT_ADMIN_SECTION), { replace: true });
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : 'Không thể đăng nhập admin.');
     } finally {
@@ -69,7 +70,7 @@ export function AdminLoginPage() {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/admin" replace />;
+    return <Navigate to={getAdminSectionPath(DEFAULT_ADMIN_SECTION)} replace />;
   }
 
   return (

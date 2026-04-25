@@ -129,12 +129,17 @@ export function AdminDataTable<TData>({
   return (
     <Card className="rounded-3xl border border-slate-200 bg-white py-0 shadow-sm">
       {(title || description || toolbar) && (
-        <CardHeader className="gap-4 border-b border-slate-200 px-5 py-4 md:flex md:flex-row md:items-center md:justify-between">
-          <div>
-            {title ? <CardTitle className="text-base font-semibold text-slate-900">{title}</CardTitle> : null}
-            {description ? <p className="mt-1 text-sm text-slate-500">{description}</p> : null}
+        <CardHeader className="gap-4 border-b border-slate-200 bg-[linear-gradient(135deg,rgba(14,116,144,0.08),rgba(255,255,255,0.95)_55%,rgba(245,158,11,0.10))] px-5 py-5 md:flex md:flex-row md:items-start md:justify-between">
+          <div className="space-y-2">
+            {title ? (
+              <div className="inline-flex items-center rounded-full border border-sky-200 bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700 shadow-sm">
+                Dữ liệu quản trị
+              </div>
+            ) : null}
+            {title ? <CardTitle className="text-xl font-black tracking-tight text-slate-950 md:text-2xl">{title}</CardTitle> : null}
+            {description ? <p className="max-w-3xl text-sm leading-6 text-slate-600">{description}</p> : null}
           </div>
-          {toolbar ? <div className="flex items-center gap-2">{toolbar}</div> : null}
+          {toolbar ? <div className="flex items-center gap-2 self-start">{toolbar}</div> : null}
         </CardHeader>
       )}
 
@@ -149,7 +154,7 @@ export function AdminDataTable<TData>({
                 return (
                   <TableHead
                     key={String(column.key)}
-                    className={cn(alignClassName, column.headerClassName)}
+                    className={cn('font-extrabold text-slate-950', alignClassName, column.headerClassName)}
                     style={column.width ? { width: column.width } : undefined}
                   >
                     {column.sortable ? (
@@ -157,7 +162,7 @@ export function AdminDataTable<TData>({
                         type="button"
                         onClick={() => handleSort(column)}
                         className={cn(
-                          'inline-flex items-center gap-1.5 transition-colors hover:text-slate-900',
+                          'inline-flex items-center gap-1.5 font-extrabold text-slate-950 transition-colors hover:text-slate-900',
                           column.align === 'center' && 'mx-auto',
                           column.align === 'right' && 'ml-auto'
                         )}

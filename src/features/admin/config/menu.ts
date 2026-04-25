@@ -40,6 +40,41 @@ export type AdminMenuItem = {
   }>;
 };
 
+export const DEFAULT_ADMIN_SECTION: AdminSectionKey = 'about-us';
+
+export const adminSectionSlugs: Record<AdminSectionKey, string> = {
+  'product-category-level-1': 'danh-muc-cap-1',
+  'product-category-level-2': 'danh-muc-cap-2',
+  products: 'san-pham',
+  'about-us': 've-chung-toi',
+  news: 'tin-tuc',
+  recruitment: 'tuyen-dung',
+  'company-intro': 'gioi-thieu-cong-ty',
+  showroom: 'showroom',
+  promotion: 'khuyen-mai',
+  services: 'dich-vu',
+  favicon: 'favicon',
+  ads: 'quang-cao',
+  videos: 'video',
+  slides: 'slide-anh',
+};
+
+const adminSectionBySlug = Object.fromEntries(
+  Object.entries(adminSectionSlugs).map(([section, slug]) => [slug, section as AdminSectionKey])
+) as Record<string, AdminSectionKey>;
+
+export function getAdminSectionPath(section: AdminSectionKey) {
+  return `/admin/${adminSectionSlugs[section]}`;
+}
+
+export function getAdminSectionFromSlug(slug?: string | null) {
+  if (!slug) {
+    return null;
+  }
+
+  return adminSectionBySlug[slug] ?? null;
+}
+
 export const adminMenuItems: AdminMenuItem[] = [
   {
     key: 'products',

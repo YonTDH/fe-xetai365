@@ -60,6 +60,7 @@ export type CategoryNode = {
   id: number;
   slug: string;
   name: string;
+  isVisible: boolean;
   children: CategoryNode[];
 };
 
@@ -78,6 +79,28 @@ function toSafeString(value: unknown) {
 function toSafeNumber(value: unknown) {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
+}
+
+function toSafeBoolean(value: unknown, fallback = false) {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    return value !== 0;
+  }
+
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['true', '1', 'yes', 'on'].includes(normalized)) {
+      return true;
+    }
+    if (['false', '0', 'no', 'off'].includes(normalized)) {
+      return false;
+    }
+  }
+
+  return fallback;
 }
 
 function mapProduct(item: Record<string, unknown>): LandingProduct {
@@ -138,6 +161,7 @@ function mapCategoryNode(item: Record<string, unknown>): CategoryNode {
     id: toSafeNumber(item.id),
     slug,
     name,
+    isVisible: toSafeBoolean(item.isVisible ?? item.is_visible, true),
     children: rawChildren.map((child) => mapCategoryNode(child as Record<string, unknown>)),
   };
 }

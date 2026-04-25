@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight, Shield } from 'lucide-react';
-import { adminMenuItems, type AdminSectionKey } from '../config/menu';
+import { getAdminSectionPath, adminMenuItems, type AdminSectionKey } from '../config/menu';
 
 type AdminSidebarProps = {
   activeSection: AdminSectionKey;
@@ -74,6 +74,7 @@ export function AdminSidebar({
                           >
                             <ChildIcon className="h-3 w-3 shrink-0 text-slate-400" />
                             <span className="text-[12px] font-medium">{child.label}</span>
+                            <span className="sr-only">{getAdminSectionPath(child.section)}</span>
                           </button>
                         );
                       })}
@@ -97,6 +98,7 @@ export function AdminSidebar({
               >
                 <Icon className="h-4 w-4 shrink-0 text-sky-300" />
                 <span className="text-[13px] font-medium">{item.label}</span>
+                {item.section ? <span className="sr-only">{getAdminSectionPath(item.section)}</span> : null}
               </button>
             );
           })}
