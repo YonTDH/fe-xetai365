@@ -24,6 +24,7 @@ export type AdminDataTableProps<TData> = {
   title?: string;
   description?: string;
   toolbar?: ReactNode;
+  filters?: ReactNode;
   columns: AdminTableColumn<TData>[];
   data: TData[];
   loading?: boolean;
@@ -74,6 +75,7 @@ export function AdminDataTable<TData>({
   title,
   description,
   toolbar,
+  filters,
   columns,
   data,
   loading = false,
@@ -128,18 +130,21 @@ export function AdminDataTable<TData>({
 
   return (
     <Card className="rounded-3xl border border-slate-200 bg-white py-0 shadow-sm">
-      {(title || description || toolbar) && (
-        <CardHeader className="gap-4 border-b border-slate-200 bg-[linear-gradient(135deg,rgba(14,116,144,0.08),rgba(255,255,255,0.95)_55%,rgba(245,158,11,0.10))] px-5 py-5 md:flex md:flex-row md:items-start md:justify-between">
-          <div className="space-y-2">
-            {title ? (
-              <div className="inline-flex items-center rounded-full border border-sky-200 bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700 shadow-sm">
-                Dữ liệu quản trị
-              </div>
-            ) : null}
-            {title ? <CardTitle className="text-xl font-black tracking-tight text-slate-950 md:text-2xl">{title}</CardTitle> : null}
-            {description ? <p className="max-w-3xl text-sm leading-6 text-slate-600">{description}</p> : null}
+      {(title || description || toolbar || filters) && (
+        <CardHeader className="gap-4 border-b border-slate-200 bg-[linear-gradient(135deg,rgba(14,116,144,0.08),rgba(255,255,255,0.95)_55%,rgba(245,158,11,0.10))] px-5 py-5">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-2">
+              {title ? (
+                <div className="inline-flex items-center rounded-full border border-sky-200 bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-700 shadow-sm">
+                  Dữ liệu quản trị
+                </div>
+              ) : null}
+              {title ? <CardTitle className="text-xl font-black tracking-tight text-slate-950 md:text-2xl">{title}</CardTitle> : null}
+              {description ? <p className="max-w-3xl text-sm leading-6 text-slate-600">{description}</p> : null}
+            </div>
+            {toolbar ? <div className="flex items-center gap-2 self-start">{toolbar}</div> : null}
           </div>
-          {toolbar ? <div className="flex items-center gap-2 self-start">{toolbar}</div> : null}
+          {filters ? <div>{filters}</div> : null}
         </CardHeader>
       )}
 
@@ -197,10 +202,7 @@ export function AdminDataTable<TData>({
                   <TableRow
                     key={String(getRowKey ? getRowKey(row, rowIndex) : rowIndex)}
                     onClick={onRowClick ? () => onRowClick(row) : undefined}
-                    className={cn(
-                      striped && rowIndex % 2 === 1 && 'bg-slate-50/60',
-                      onRowClick && 'cursor-pointer hover:bg-sky-50'
-                    )}
+                    className={cn(striped && rowIndex % 2 === 1 && 'bg-slate-50/60', onRowClick && 'cursor-pointer hover:bg-sky-50')}
                   >
                     {columns.map((column) => (
                       <TableCell key={String(column.key)} className={cn(getAlignClassName(column.align), column.cellClassName)}>
@@ -223,9 +225,7 @@ export function AdminDataTable<TData>({
       </CardContent>
 
       <CardFooter className="flex flex-col gap-3 border-t border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-sm text-slate-500">
-          {loading ? 'Đang tải dữ liệu...' : `Tổng ${sortedData.length} bản ghi`}
-        </div>
+        <div className="text-sm text-slate-500">{loading ? 'Đang tải dữ liệu...' : `Tổng ${sortedData.length} bản ghi`}</div>
 
         <div className="flex items-center gap-2">
           <Button type="button" variant="outline" onClick={() => setPage((prev) => Math.max(1, prev - 1))} disabled={currentPage === 1 || loading}>

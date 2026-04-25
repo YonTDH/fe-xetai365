@@ -52,11 +52,6 @@ export function CategoryLevel2Modal({
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!open) return;
-    setForm(createFormState(item));
-  }, [item, open]);
-
-  useEffect(() => {
     if (!open || isSaving) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -127,6 +122,8 @@ export function CategoryLevel2Modal({
               value={form.parentId}
               onChange={(event) => handleChange('parentId', Number(event.target.value))}
               disabled={isReadOnly || isSaving}
+              aria-label="Danh mục cấp 1"
+              title="Danh mục cấp 1"
               className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
             >
               {parentOptions.map((parent) => (

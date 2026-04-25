@@ -10,6 +10,7 @@ import {
   type AdminVehicleCategory,
 } from '../../api/adminApi';
 import { AdminDataTable, type AdminTableColumn } from '../../components/AdminDataTable';
+import { AdminTableFilters } from '../../components/AdminTableFilters';
 import { CategoryLevel2Modal } from './CategoryLevel2Modal';
 
 type CategoryLevel2Row = {
@@ -62,6 +63,8 @@ export function AdminCategoryLevel2Page() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [modalState, setModalState] = useState<ModalState>(null);
   const [deleteState, setDeleteState] = useState<DeleteState>(null);
+  const [keyword, setKeyword] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'visible' | 'hidden'>('all');
 
   const loadItems = useCallback(async () => {
     try {
@@ -83,10 +86,25 @@ export function AdminCategoryLevel2Page() {
 
   const level2Items = useMemo(() => flattenLevel2Categories(items), [items]);
   const rows = useMemo(() => level2Items.map(mapCategoryToRow), [level2Items]);
-  const allSelected = rows.length > 0 && selectedIds.length === rows.length;
+  const filteredRows = useMemo(() => {
+    const normalizedKeyword = keyword.trim().toLowerCase();
+
+    return rows.filter((row) => {
+      const matchesKeyword =
+        !normalizedKeyword ||
+        row.name.toLowerCase().includes(normalizedKeyword) ||
+        row.parentName.toLowerCase().includes(normalizedKeyword);
+      const matchesStatus =
+        statusFilter === 'all' || (statusFilter === 'visible' ? row.isVisible : !row.isVisible);
+
+      return matchesKeyword && matchesStatus;
+    });
+  }, [keyword, rows, statusFilter]);
+
+  const allSelected = filteredRows.length > 0 && selectedIds.length === filteredRows.length;
 
   const toggleSelectAll = () => {
-    setSelectedIds((prev) => (prev.length === rows.length ? [] : rows.map((row) => row.id)));
+    setSelectedIds((prev) => (prev.length === filteredRows.length ? [] : filteredRows.map((row) => row.id)));
   };
 
   const toggleSelectOne = (id: number) => {
@@ -300,7 +318,7 @@ export function AdminCategoryLevel2Page() {
         ),
       },
     ],
-    [allSelected, isDeletingId, selectedIds]
+    [allSelected, filteredRows.length, isDeletingId, selectedIds]
   );
 
   return (
@@ -312,11 +330,21 @@ export function AdminCategoryLevel2Page() {
           title="Danh mục cấp 2"
           description="Dữ liệu đang lấy từ cây danh mục quản trị để phục vụ cập nhật danh mục cấp 2."
           columns={columns}
-          data={rows}
+          data={filteredRows}
           loading={isLoading}
           emptyText="Chưa có danh mục cấp 2."
           getRowKey={(row) => row.id}
           onRowClick={(row) => openModal('view', row.id)}
+          filters={
+            <AdminTableFilters
+              keyword={keyword}
+              onKeywordChange={setKeyword}
+              keywordPlaceholder="Tìm theo tên danh mục cấp 2 hoặc cấp 1..."
+              status={statusFilter}
+              onStatusChange={(value) => setStatusFilter(value as 'all' | 'visible' | 'hidden')}
+              summary={`Hiển thị ${filteredRows.length}/${rows.length} danh mục cấp 2`}
+            />
+          }
           toolbar={
             <div className="flex items-center gap-2">
               <Button type="button" variant="outline" onClick={() => void loadItems()} disabled={isLoading || isSaving || isDeletingId !== null}>
@@ -329,6 +357,7 @@ export function AdminCategoryLevel2Page() {
       </div>
 
       <CategoryLevel2Modal
+        key={`${modalState?.mode ?? 'view'}-${modalState?.item?.id ?? 'none'}`}
         open={Boolean(modalState)}
         item={modalState?.item ?? null}
         parentOptions={items}

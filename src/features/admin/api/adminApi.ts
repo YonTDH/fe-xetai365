@@ -64,6 +64,61 @@ export type AdminVehicleCategory = {
   children: AdminVehicleCategory[];
 };
 
+export type AdminProduct = {
+  id: number;
+  slug: string;
+  title: string;
+  productCode: string;
+  shortDescription: string;
+  content: string;
+  brand: string;
+  status: string;
+  priceVnd: string;
+  location: string;
+  imageUrl: string;
+  images: Array<string | { url?: string; src?: string; alt?: string }>;
+  isFeatured: boolean;
+  isVisible: boolean;
+  sortOrder: number;
+  categoryLevel2Id: number;
+  categoryLevel2Name: string;
+  categoryLevel2Slug: string;
+  categoryLevel1Id: number;
+  categoryLevel1Name: string;
+  categoryLevel1Slug: string;
+  vehicleType: string;
+  condition: string;
+  year: number;
+  mileageKm: number;
+  fuelType: string;
+  transmission: string;
+  titleSeo: string;
+  keywords: string;
+  metaDescription: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export type AdminProductPayload = {
+  categoryLevel2Id: number;
+  productCode: string;
+  slug: string;
+  title: string;
+  shortDescription: string;
+  content: string;
+  brand: string;
+  status: string;
+  priceVnd: string;
+  location: string;
+  imageUrl: string;
+  isFeatured: boolean;
+  isVisible: boolean;
+  sortOrder: number;
+  titleSeo: string;
+  keywords: string;
+  metaDescription: string;
+};
+
 function getStorage() {
   if (typeof window === 'undefined') {
     return null;
@@ -134,6 +189,43 @@ function mapAdminVehicleCategory(item: Record<string, unknown>): AdminVehicleCat
     isVisible: toSafeBoolean(item.isVisible ?? item.is_visible, true),
     adminLevel: adminLevel === 2 ? 2 : 1,
     children: rawChildren.map((child) => mapAdminVehicleCategory(child as Record<string, unknown>)),
+  };
+}
+
+function mapAdminProduct(item: Record<string, unknown>): AdminProduct {
+  return {
+    id: toSafeNumber(item.id),
+    slug: toSafeString(item.slug),
+    title: toSafeString(item.title),
+    productCode: toSafeString(item.productCode || item.product_code),
+    shortDescription: toSafeString(item.shortDescription || item.short_description),
+    content: toSafeString(item.content),
+    brand: toSafeString(item.brand),
+    status: toSafeString(item.status),
+    priceVnd: toSafeString(item.priceVnd || item.price_vnd),
+    location: toSafeString(item.location),
+    imageUrl: toSafeString(item.imageUrl || item.image_url),
+    images: Array.isArray(item.images) ? (item.images as Array<string | { url?: string; src?: string; alt?: string }>) : [],
+    isFeatured: toSafeBoolean(item.isFeatured ?? item.is_featured, false),
+    isVisible: toSafeBoolean(item.isVisible ?? item.is_visible, true),
+    sortOrder: toSafeNumber(item.sortOrder || item.sort_order) || 1,
+    categoryLevel2Id: toSafeNumber(item.categoryLevel2Id || item.category_level_2_id),
+    categoryLevel2Name: toSafeString(item.categoryLevel2Name || item.category_level_2_name),
+    categoryLevel2Slug: toSafeString(item.categoryLevel2Slug || item.category_level_2_slug),
+    categoryLevel1Id: toSafeNumber(item.categoryLevel1Id || item.category_level_1_id),
+    categoryLevel1Name: toSafeString(item.categoryLevel1Name || item.category_level_1_name),
+    categoryLevel1Slug: toSafeString(item.categoryLevel1Slug || item.category_level_1_slug),
+    vehicleType: toSafeString(item.vehicleType || item.vehicle_type),
+    condition: toSafeString(item.condition),
+    year: toSafeNumber(item.year),
+    mileageKm: toSafeNumber(item.mileageKm || item.mileage_km),
+    fuelType: toSafeString(item.fuelType || item.fuel_type),
+    transmission: toSafeString(item.transmission),
+    titleSeo: toSafeString(item.titleSeo || item.title_seo),
+    keywords: toSafeString(item.keywords),
+    metaDescription: toSafeString(item.metaDescription || item.meta_description),
+    createdAt: toSafeString(item.createdAt || item.created_at) || null,
+    updatedAt: toSafeString(item.updatedAt || item.updated_at) || null,
   };
 }
 
@@ -311,5 +403,59 @@ export async function deleteAdminVehicleCategoryLevel2(id: number) {
   return {
     id: toSafeNumber(data.id),
     name: toSafeString(data.name),
+  };
+}
+
+export async function listAdminProducts(filters?: {
+  keyword?: string;
+  status?: string;
+  visibility?: string;
+  categoryLevel2Id?: number;
+}) {
+  const query = new URLSearchParams();
+  if (filters?.keyword) query.set('keyword', filters.keyword);
+  if (filters?.status) query.set('status', filters.status);
+  if (filters?.visibility) query.set('visibility', filters.visibility);
+  if (filters?.categoryLevel2Id) query.set('categoryLevel2Id', String(filters.categoryLevel2Id));
+
+  const queryString = query.toString();
+  const data = (await adminFetch(`/api/admin/products${queryString ? `?${queryString}` : ''}`, {
+    method: 'GET',
+  })) as {
+    items?: Record<string, unknown>[];
+  };
+
+  return (data.items || []).map(mapAdminProduct);
+}
+
+export async function createAdminProduct(payload: AdminProductPayload) {
+  const data = (await adminFetch('/api/admin/products', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })) as Record<string, unknown>;
+
+  return mapAdminProduct(data);
+}
+
+export async function updateAdminProduct(id: number, payload: AdminProductPayload) {
+  const data = (await adminFetch(`/api/admin/products/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })) as Record<string, unknown>;
+
+  return mapAdminProduct(data);
+}
+
+export async function deleteAdminProduct(id: number) {
+  const data = (await adminFetch(`/api/admin/products/${id}`, {
+    method: 'DELETE',
+  })) as {
+    id?: number;
+    title?: string;
+  };
+
+  return {
+    id: toSafeNumber(data.id),
+    title: toSafeString(data.title),
   };
 }

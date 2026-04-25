@@ -4,6 +4,7 @@ import { AdminCategoryLevel1Page } from './Category-lv1/AdminCategoryLevel1Page'
 import { AdminCategoryLevel2Page } from './Category-lv2/AdminCategoryLevel2Page';
 import { AdminNewsPage } from './AdminNewsPage';
 import { AdminPromotionPage } from './AdminPromotionPage';
+import { AdminProductsPage } from './Products/AdminProductsPage';
 import { AdminRecruitmentPage } from './AdminRecruitmentPage';
 
 export function AdminSectionContent({ section }: { section: AdminSectionKey }) {
@@ -12,6 +13,8 @@ export function AdminSectionContent({ section }: { section: AdminSectionKey }) {
       return <AdminCategoryLevel1Page />;
     case 'product-category-level-2':
       return <AdminCategoryLevel2Page />;
+    case 'products':
+      return <AdminProductsPage />;
     case 'news':
       return <AdminNewsPage />;
     case 'recruitment':
