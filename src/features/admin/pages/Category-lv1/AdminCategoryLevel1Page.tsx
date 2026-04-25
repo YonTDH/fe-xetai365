@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Eye, Pencil, RefreshCw, Trash2 } from 'lucide-react';
-import { listCatalogCategoriesTree, type CategoryNode } from '@/api/landingApi';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { AdminDataTable, type AdminTableColumn } from './AdminDataTable';
+import { Button } from '@/components/ui/button';
+import {
+  listAdminVehicleCategoriesTree,
+  updateAdminVehicleCategoryLevel1,
+  type AdminVehicleCategory,
+} from '../../api/adminApi';
+import { AdminDataTable, type AdminTableColumn } from '../../components/AdminDataTable';
+import { CategoryLevel1Modal } from './CategoryLevel1Modal';
 
 type CategoryLevel1Row = {
   id: number;
@@ -13,7 +18,12 @@ type CategoryLevel1Row = {
   statusText: string;
 };
 
-function mapCategoryToRow(item: CategoryNode): CategoryLevel1Row {
+type ModalState = {
+  mode: 'view' | 'edit';
+  item: AdminVehicleCategory;
+} | null;
+
+function mapCategoryToRow(item: AdminVehicleCategory): CategoryLevel1Row {
   return {
     id: item.id,
     name: item.name,
@@ -23,17 +33,36 @@ function mapCategoryToRow(item: CategoryNode): CategoryLevel1Row {
   };
 }
 
-export function AdminCategoryLevel1Manager() {
-  const [items, setItems] = useState<CategoryNode[]>([]);
+function updateCategoryNode(nodes: AdminVehicleCategory[], nextItem: AdminVehicleCategory): AdminVehicleCategory[] {
+  return nodes.map((node) => {
+    if (node.id === nextItem.id) {
+      return nextItem;
+    }
+
+    if (!node.children.length) {
+      return node;
+    }
+
+    return {
+      ...node,
+      children: updateCategoryNode(node.children, nextItem),
+    };
+  });
+}
+
+export function AdminCategoryLevel1Page() {
+  const [items, setItems] = useState<AdminVehicleCategory[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [modalState, setModalState] = useState<ModalState>(null);
 
   const loadItems = useCallback(async () => {
     try {
       setIsLoading(true);
       setError('');
-      const data = await listCatalogCategoriesTree();
+      const data = await listAdminVehicleCategoriesTree();
       setItems(data);
     } catch (err) {
       setItems([]);
@@ -56,6 +85,35 @@ export function AdminCategoryLevel1Manager() {
 
   const toggleSelectOne = (id: number) => {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
+  };
+
+  const openModal = (mode: 'view' | 'edit', id: number) => {
+    const item = items.find((entry) => entry.id === id);
+    if (!item) {
+      return;
+    }
+
+    setModalState({ mode, item });
+  };
+
+  const closeModal = () => {
+    setModalState(null);
+  };
+
+  const handleSaveCategory = async (
+    nextItem: Pick<AdminVehicleCategory, 'id' | 'name' | 'slug' | 'isVisible' | 'description' | 'sortOrder'>
+  ) => {
+    try {
+      setIsSaving(true);
+      setError('');
+      const updated = await updateAdminVehicleCategoryLevel1(nextItem.id, nextItem);
+      setItems((prev) => updateCategoryNode(prev, { ...updated, children: modalState?.item.children || [] }));
+      setModalState(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể cập nhật danh mục cấp 1.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const columns = useMemo<AdminTableColumn<CategoryLevel1Row>[]>(
@@ -142,7 +200,10 @@ export function AdminCategoryLevel1Manager() {
               size="icon-sm"
               aria-label={`Xem danh mục ${row.name}`}
               title={`Xem danh mục ${row.name}`}
-              onClick={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                openModal('view', row.id);
+              }}
             >
               <Eye className="h-4 w-4" />
             </Button>
@@ -152,7 +213,10 @@ export function AdminCategoryLevel1Manager() {
               size="icon-sm"
               aria-label={`Sửa danh mục ${row.name}`}
               title={`Sửa danh mục ${row.name}`}
-              onClick={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                openModal('edit', row.id);
+              }}
             >
               <Pencil className="h-4 w-4" />
             </Button>
@@ -175,28 +239,38 @@ export function AdminCategoryLevel1Manager() {
   );
 
   return (
-    <div className="space-y-4">
-      {error ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-      ) : null}
+    <>
+      <div className="space-y-4">
+        {error ? (
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+        ) : null}
 
-      <AdminDataTable
-        title="Danh mục cấp 1"
-        description="Dữ liệu đang lấy từ cây danh mục hiện có trên site để chuẩn bị cho màn quản lý danh mục admin."
-        columns={columns}
-        data={rows}
-        loading={isLoading}
-        emptyText="Chưa có danh mục cấp 1."
-        getRowKey={(row) => row.id}
-        toolbar={
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" onClick={() => void loadItems()} disabled={isLoading}>
-              <RefreshCw className="h-4 w-4" />
-              Tải lại
-            </Button>
-          </div>
-        }
+        <AdminDataTable
+          title="Danh mục cấp 1"
+          description="Dữ liệu đang lấy từ cây danh mục hiện có trên site để chuẩn bị cho màn quản lý danh mục admin."
+          columns={columns}
+          data={rows}
+          loading={isLoading}
+          emptyText="Chưa có danh mục cấp 1."
+          getRowKey={(row) => row.id}
+          toolbar={
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="outline" onClick={() => void loadItems()} disabled={isLoading || isSaving}>
+                <RefreshCw className="h-4 w-4" />
+                Tải lại
+              </Button>
+            </div>
+          }
+        />
+      </div>
+
+      <CategoryLevel1Modal
+        open={Boolean(modalState)}
+        item={modalState?.item ?? null}
+        mode={modalState?.mode ?? 'view'}
+        onClose={closeModal}
+        onSave={handleSaveCategory}
       />
-    </div>
+    </>
   );
 }

@@ -51,6 +51,19 @@ export type AdminBulletinPayload = {
   metaDescription: string;
 };
 
+export type AdminVehicleCategory = {
+  id: number;
+  slug: string;
+  name: string;
+  description: string;
+  parentId: number | null;
+  parentSlug: string | null;
+  sortOrder: number;
+  isVisible: boolean;
+  adminLevel: 1 | 2;
+  children: AdminVehicleCategory[];
+};
+
 function getStorage() {
   if (typeof window === 'undefined') {
     return null;
@@ -103,6 +116,24 @@ function mapAdminBulletin(item: Record<string, unknown>): AdminBulletin {
     titleSeo: toSafeString(item.titleSeo || item.title_seo),
     keywords: toSafeString(item.keywords),
     metaDescription: toSafeString(item.metaDescription || item.meta_description),
+  };
+}
+
+function mapAdminVehicleCategory(item: Record<string, unknown>): AdminVehicleCategory {
+  const rawChildren = Array.isArray(item.children) ? item.children : [];
+  const adminLevel = Number(item.adminLevel ?? item.admin_level);
+
+  return {
+    id: toSafeNumber(item.id),
+    slug: toSafeString(item.slug),
+    name: toSafeString(item.name),
+    description: toSafeString(item.description),
+    parentId: item.parentId == null && item.parent_id == null ? null : toSafeNumber(item.parentId ?? item.parent_id),
+    parentSlug: toSafeString(item.parentSlug || item.parent_slug) || null,
+    sortOrder: toSafeNumber(item.sortOrder || item.sort_order) || 1,
+    isVisible: toSafeBoolean(item.isVisible ?? item.is_visible, true),
+    adminLevel: adminLevel === 2 ? 2 : 1,
+    children: rawChildren.map((child) => mapAdminVehicleCategory(child as Record<string, unknown>)),
   };
 }
 
@@ -221,4 +252,24 @@ export async function deleteAdminBulletin(id: number) {
   await adminFetch(`/api/admin/bulletins/${id}`, {
     method: 'DELETE',
   });
+}
+
+export async function listAdminVehicleCategoriesTree() {
+  const data = (await adminFetch('/api/admin/vehicle-categories/tree', {
+    method: 'GET',
+  })) as Record<string, unknown>[];
+
+  return (data || []).map(mapAdminVehicleCategory);
+}
+
+export async function updateAdminVehicleCategoryLevel1(
+  id: number,
+  payload: Pick<AdminVehicleCategory, 'name' | 'slug' | 'isVisible' | 'description' | 'sortOrder'>
+) {
+  const data = (await adminFetch(`/api/admin/vehicle-categories/level-1/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })) as Record<string, unknown>;
+
+  return mapAdminVehicleCategory(data);
 }
