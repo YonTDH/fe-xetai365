@@ -119,6 +119,43 @@ export type AdminProductPayload = {
   metaDescription: string;
 };
 
+export type AdminSiteSetting = {
+  id: number;
+  title: string;
+  keywords: string;
+  description: string;
+  giupdochiase: number;
+  ten: string;
+  email: string;
+  website: string;
+  dienthoai: string;
+  diachi: string;
+  fax: string;
+  tennv: string;
+  hotline: string;
+  tennv1: string;
+  hotline1: string;
+  tennv2: string;
+  hotline2: string;
+  toado: string;
+  facebook: string;
+  youtube: string;
+  yahoo: string;
+  skype: string;
+  twitter: string;
+  zing: string;
+  google: string;
+  tip: string;
+  linktip: string;
+  analytics: string;
+  dangky: string;
+  tietkiem: string;
+  hailong: string;
+  updatedAt: string | null;
+};
+
+export type AdminSiteSettingPayload = Omit<AdminSiteSetting, 'id' | 'updatedAt'>;
+
 function getStorage() {
   if (typeof window === 'undefined') {
     return null;
@@ -226,6 +263,45 @@ function mapAdminProduct(item: Record<string, unknown>): AdminProduct {
     metaDescription: toSafeString(item.metaDescription || item.meta_description),
     createdAt: toSafeString(item.createdAt || item.created_at) || null,
     updatedAt: toSafeString(item.updatedAt || item.updated_at) || null,
+  };
+}
+
+function mapAdminSiteSetting(item: Record<string, unknown> | null | undefined): AdminSiteSetting {
+  const source = item || {};
+
+  return {
+    id: toSafeNumber(source.id) || 1,
+    title: toSafeString(source.title),
+    keywords: toSafeString(source.keywords),
+    description: toSafeString(source.description),
+    giupdochiase: toSafeNumber(source.giupdochiase),
+    ten: toSafeString(source.ten),
+    email: toSafeString(source.email),
+    website: toSafeString(source.website),
+    dienthoai: toSafeString(source.dienthoai),
+    diachi: toSafeString(source.diachi),
+    fax: toSafeString(source.fax),
+    tennv: toSafeString(source.tennv),
+    hotline: toSafeString(source.hotline),
+    tennv1: toSafeString(source.tennv1),
+    hotline1: toSafeString(source.hotline1),
+    tennv2: toSafeString(source.tennv2),
+    hotline2: toSafeString(source.hotline2),
+    toado: toSafeString(source.toado),
+    facebook: toSafeString(source.facebook),
+    youtube: toSafeString(source.youtube),
+    yahoo: toSafeString(source.yahoo),
+    skype: toSafeString(source.skype),
+    twitter: toSafeString(source.twitter),
+    zing: toSafeString(source.zing),
+    google: toSafeString(source.google),
+    tip: toSafeString(source.tip),
+    linktip: toSafeString(source.linktip),
+    analytics: toSafeString(source.analytics),
+    dangky: toSafeString(source.dangky),
+    tietkiem: toSafeString(source.tietkiem),
+    hailong: toSafeString(source.hailong),
+    updatedAt: toSafeString(source.updatedAt || source.updated_at) || null,
   };
 }
 
@@ -458,4 +534,21 @@ export async function deleteAdminProduct(id: number) {
     id: toSafeNumber(data.id),
     title: toSafeString(data.title),
   };
+}
+
+export async function getAdminSiteSetting() {
+  const data = (await adminFetch('/api/settings', {
+    method: 'GET',
+  })) as Record<string, unknown> | null;
+
+  return mapAdminSiteSetting(data);
+}
+
+export async function updateAdminSiteSetting(payload: AdminSiteSettingPayload) {
+  const data = (await adminFetch('/api/settings', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })) as Record<string, unknown>;
+
+  return mapAdminSiteSetting(data);
 }
