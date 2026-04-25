@@ -287,3 +287,29 @@ export async function deleteAdminVehicleCategoryLevel1(id: number) {
     name: toSafeString(data.name),
   };
 }
+
+export async function updateAdminVehicleCategoryLevel2(
+  id: number,
+  payload: Pick<AdminVehicleCategory, 'parentId' | 'name' | 'slug' | 'isVisible' | 'description' | 'sortOrder'>
+) {
+  const data = (await adminFetch(`/api/admin/vehicle-categories/level-2/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })) as Record<string, unknown>;
+
+  return mapAdminVehicleCategory(data);
+}
+
+export async function deleteAdminVehicleCategoryLevel2(id: number) {
+  const data = (await adminFetch(`/api/admin/vehicle-categories/level-2/${id}`, {
+    method: 'DELETE',
+  })) as {
+    id?: number;
+    name?: string;
+  };
+
+  return {
+    id: toSafeNumber(data.id),
+    name: toSafeString(data.name),
+  };
+}
