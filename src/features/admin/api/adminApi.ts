@@ -273,3 +273,17 @@ export async function updateAdminVehicleCategoryLevel1(
 
   return mapAdminVehicleCategory(data);
 }
+
+export async function deleteAdminVehicleCategoryLevel1(id: number) {
+  const data = (await adminFetch(`/api/admin/vehicle-categories/level-1/${id}`, {
+    method: 'DELETE',
+  })) as {
+    id?: number;
+    name?: string;
+  };
+
+  return {
+    id: toSafeNumber(data.id),
+    name: toSafeString(data.name),
+  };
+}

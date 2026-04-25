@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Eye, Pencil, RefreshCw, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useAppToast } from '@/components/ui/toast';
 import {
+  deleteAdminVehicleCategoryLevel1,
   listAdminVehicleCategoriesTree,
   updateAdminVehicleCategoryLevel1,
   type AdminVehicleCategory,
@@ -21,6 +23,12 @@ type CategoryLevel1Row = {
 type ModalState = {
   mode: 'view' | 'edit';
   item: AdminVehicleCategory;
+} | null;
+
+type DeleteState = {
+  id: number;
+  name: string;
+  childCount: number;
 } | null;
 
 function mapCategoryToRow(item: AdminVehicleCategory): CategoryLevel1Row {
@@ -51,12 +59,15 @@ function updateCategoryNode(nodes: AdminVehicleCategory[], nextItem: AdminVehicl
 }
 
 export function AdminCategoryLevel1Page() {
+  const { showToast } = useAppToast();
   const [items, setItems] = useState<AdminVehicleCategory[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeletingId, setIsDeletingId] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [modalState, setModalState] = useState<ModalState>(null);
+  const [deleteState, setDeleteState] = useState<DeleteState>(null);
 
   const loadItems = useCallback(async () => {
     try {
@@ -97,6 +108,9 @@ export function AdminCategoryLevel1Page() {
   };
 
   const closeModal = () => {
+    if (isSaving) {
+      return;
+    }
     setModalState(null);
   };
 
@@ -107,12 +121,66 @@ export function AdminCategoryLevel1Page() {
       setIsSaving(true);
       setError('');
       const updated = await updateAdminVehicleCategoryLevel1(nextItem.id, nextItem);
-      setItems((prev) => updateCategoryNode(prev, { ...updated, children: modalState?.item.children || [] }));
+      const previousChildren = modalState?.item.children || [];
       setModalState(null);
+      await loadItems();
+      setItems((prev) => updateCategoryNode(prev, { ...updated, children: previousChildren }));
+      showToast({
+        type: 'success',
+        message: `Đã cập nhật danh mục "${updated.name}".`,
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể cập nhật danh mục cấp 1.');
+      const message = err instanceof Error ? err.message : 'Không thể cập nhật danh mục cấp 1.';
+      setError(message);
+      showToast({
+        type: 'error',
+        message,
+      });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const requestDeleteCategory = (row: CategoryLevel1Row) => {
+    setDeleteState({
+      id: row.id,
+      name: row.name,
+      childCount: row.childCount,
+    });
+  };
+
+  const closeDeleteModal = () => {
+    if (isDeletingId !== null) {
+      return;
+    }
+    setDeleteState(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteState) {
+      return;
+    }
+
+    try {
+      setIsDeletingId(deleteState.id);
+      setError('');
+      const deleted = await deleteAdminVehicleCategoryLevel1(deleteState.id);
+      setItems((prev) => prev.filter((item) => item.id !== deleteState.id));
+      setSelectedIds((prev) => prev.filter((id) => id !== deleteState.id));
+      setDeleteState(null);
+      showToast({
+        type: 'success',
+        message: `Đã xóa danh mục "${deleted.name || deleteState.name}".`,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể xóa danh mục cấp 1.';
+      setError(message);
+      showToast({
+        type: 'error',
+        message,
+      });
+    } finally {
+      setIsDeletingId(null);
     }
   };
 
@@ -204,6 +272,7 @@ export function AdminCategoryLevel1Page() {
                 event.stopPropagation();
                 openModal('view', row.id);
               }}
+              disabled={isDeletingId === row.id}
             >
               <Eye className="h-4 w-4" />
             </Button>
@@ -217,6 +286,7 @@ export function AdminCategoryLevel1Page() {
                 event.stopPropagation();
                 openModal('edit', row.id);
               }}
+              disabled={isDeletingId === row.id}
             >
               <Pencil className="h-4 w-4" />
             </Button>
@@ -226,16 +296,20 @@ export function AdminCategoryLevel1Page() {
               size="icon-sm"
               aria-label={`Xóa danh mục ${row.name}`}
               title={`Xóa danh mục ${row.name}`}
-              onClick={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                requestDeleteCategory(row);
+              }}
+              disabled={isDeletingId === row.id}
               className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className={['h-4 w-4', isDeletingId === row.id ? 'animate-pulse' : ''].join(' ')} />
             </Button>
           </div>
         ),
       },
     ],
-    [allSelected, rows, selectedIds]
+    [allSelected, isDeletingId, selectedIds]
   );
 
   return (
@@ -247,17 +321,18 @@ export function AdminCategoryLevel1Page() {
 
         <AdminDataTable
           title="Danh mục cấp 1"
-          description="Dữ liệu đang lấy từ cây danh mục hiện có trên site để chuẩn bị cho màn quản lý danh mục admin."
+          description="Dữ liệu đang lấy từ cây danh mục quản trị để phục vụ cập nhật danh mục cấp 1."
           columns={columns}
           data={rows}
           loading={isLoading}
           emptyText="Chưa có danh mục cấp 1."
           getRowKey={(row) => row.id}
+          onRowClick={(row) => openModal('view', row.id)}
           toolbar={
             <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" onClick={() => void loadItems()} disabled={isLoading || isSaving}>
-                <RefreshCw className="h-4 w-4" />
-                Tải lại
+              <Button type="button" variant="outline" onClick={() => void loadItems()} disabled={isLoading || isSaving || isDeletingId !== null}>
+                <RefreshCw className={['h-4 w-4', isLoading ? 'animate-spin' : ''].join(' ')} />
+                {isLoading ? 'Đang tải...' : 'Tải lại'}
               </Button>
             </div>
           }
@@ -268,9 +343,38 @@ export function AdminCategoryLevel1Page() {
         open={Boolean(modalState)}
         item={modalState?.item ?? null}
         mode={modalState?.mode ?? 'view'}
+        isSaving={isSaving}
         onClose={closeModal}
         onSave={handleSaveCategory}
       />
+
+      {deleteState ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="space-y-2">
+              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-red-600">Xác nhận xóa</div>
+              <h3 className="text-xl font-black text-slate-950">{deleteState.name}</h3>
+              <p className="text-sm leading-6 text-slate-600">
+                Danh mục này hiện có {deleteState.childCount} danh mục cấp 2. Chỉ có thể xóa khi không còn danh mục cấp 2 đang hiển thị trong hệ thống.
+              </p>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <Button type="button" variant="outline" onClick={closeDeleteModal} disabled={isDeletingId !== null}>
+                Hủy
+              </Button>
+              <Button
+                type="button"
+                onClick={() => void handleConfirmDelete()}
+                disabled={isDeletingId !== null}
+                className="bg-red-600 text-white hover:bg-red-700"
+              >
+                {isDeletingId !== null ? 'Đang xóa...' : 'Xóa danh mục'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
