@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Menu, MessageCircleMore, X } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { NavMenu } from '@/components/NavMenu';
 import { Footer } from '@/components/Footer';
 
 export function MainLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const zaloPhone = '0899966254';
+  const zaloHref = `https://zalo.me/${zaloPhone}`;
 
   useEffect(() => {
     if (drawerOpen) {
@@ -94,6 +96,16 @@ export function MainLayout() {
       <main>
         <Outlet />
       </main>
+
+      <a
+        href={zaloHref}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Chat Zalo"
+        className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#0068ff] text-white shadow-[0_14px_30px_rgba(0,104,255,0.35)] transition-transform hover:scale-105"
+      >
+        <MessageCircleMore className="h-7 w-7" />
+      </a>
 
       <Footer />
     </div>
