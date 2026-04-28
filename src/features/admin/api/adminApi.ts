@@ -156,6 +156,17 @@ export type AdminSiteSetting = {
 
 export type AdminSiteSettingPayload = Omit<AdminSiteSetting, 'id' | 'updatedAt'>;
 
+type AdminUploadFolder = 'products' | 'news' | 'promotions' | 'recruitment' | 'pages';
+
+type AdminUploadSignature = {
+  cloudName: string;
+  apiKey: string;
+  uploadPreset: string;
+  folder: string;
+  timestamp: number;
+  signature: string;
+};
+
 function getStorage() {
   if (typeof window === 'undefined') {
     return null;
@@ -551,4 +562,61 @@ export async function updateAdminSiteSetting(payload: AdminSiteSettingPayload) {
   })) as Record<string, unknown>;
 
   return mapAdminSiteSetting(data);
+}
+
+async function getAdminUploadSignature(folder: AdminUploadFolder) {
+  const data = (await adminFetch('/api/admin/uploads/signature', {
+    method: 'POST',
+    body: JSON.stringify({ folder }),
+  })) as Record<string, unknown>;
+
+  return {
+    cloudName: toSafeString(data.cloudName),
+    apiKey: toSafeString(data.apiKey),
+    uploadPreset: toSafeString(data.uploadPreset),
+    folder: toSafeString(data.folder),
+    timestamp: toSafeNumber(data.timestamp),
+    signature: toSafeString(data.signature),
+  } satisfies AdminUploadSignature;
+}
+
+export async function uploadAdminImage(file: File, folder: AdminUploadFolder) {
+  const signature = await getAdminUploadSignature(folder);
+  if (!signature.cloudName || !signature.apiKey || !signature.signature || !signature.timestamp || !signature.uploadPreset) {
+    throw new Error('Missing Cloudinary upload signature.');
+  }
+
+  const formData = new FormData();
+  formData.set('file', file);
+  formData.set('api_key', signature.apiKey);
+  formData.set('timestamp', String(signature.timestamp));
+  formData.set('signature', signature.signature);
+  formData.set('upload_preset', signature.uploadPreset);
+  formData.set('folder', signature.folder);
+
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${signature.cloudName}/image/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  const data = (await response.json().catch(() => ({}))) as {
+    secure_url?: string;
+    url?: string;
+    public_id?: string;
+    error?: { message?: string };
+  };
+
+  if (!response.ok) {
+    throw new Error(data.error?.message || 'Cloudinary upload failed.');
+  }
+
+  const imageUrl = toSafeString(data.secure_url || data.url);
+  if (!imageUrl) {
+    throw new Error('Cloudinary upload returned empty URL.');
+  }
+
+  return {
+    imageUrl,
+    publicId: toSafeString(data.public_id),
+  };
 }

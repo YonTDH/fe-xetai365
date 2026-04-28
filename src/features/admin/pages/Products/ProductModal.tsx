@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import type { AdminProduct, AdminProductPayload, AdminVehicleCategory } from '../../api/adminApi';
+import { uploadAdminImage, type AdminProduct, type AdminProductPayload, type AdminVehicleCategory } from '../../api/adminApi';
 
 type ProductModalProps = {
   item: AdminProduct | null;
@@ -88,11 +88,17 @@ export function ProductModal({
     [parentCategories]
   );
   const [form, setForm] = useState<FormState>(createFormState(item, categoryLevel2Options[0]?.id || 0));
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [uploadError, setUploadError] = useState('');
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setForm(createFormState(item, categoryLevel2Options[0]?.id || 0));
+    setSelectedImageFile(null);
+    setIsUploadingImage(false);
+    setUploadError('');
   }, [item, open, categoryLevel2Options]);
 
   useEffect(() => {
@@ -118,6 +124,25 @@ export function ProductModal({
       return;
     }
     onSave(form);
+  };
+
+  const handleUploadImage = async () => {
+    if (!selectedImageFile) {
+      setUploadError('Vui lòng chọn ảnh trước khi upload.');
+      return;
+    }
+
+    try {
+      setIsUploadingImage(true);
+      setUploadError('');
+      const uploaded = await uploadAdminImage(selectedImageFile, 'products');
+      handleChange('imageUrl', uploaded.imageUrl);
+      setSelectedImageFile(null);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Không thể upload ảnh.');
+    } finally {
+      setIsUploadingImage(false);
+    }
   };
 
   return (
@@ -186,7 +211,31 @@ export function ProductModal({
             <Input value={form.location} onChange={(event) => handleChange('location', event.target.value)} readOnly={isReadOnly || isSaving} />
           </Field>
           <Field label="Ảnh đại diện">
-            <Input value={form.imageUrl} onChange={(event) => handleChange('imageUrl', event.target.value)} readOnly={isReadOnly || isSaving} />
+            <div className="space-y-3">
+              <Input value={form.imageUrl} onChange={(event) => handleChange('imageUrl', event.target.value)} readOnly={isReadOnly || isSaving} />
+              {!isReadOnly ? (
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="inline-flex cursor-pointer items-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(event) => {
+                        setSelectedImageFile(event.target.files?.[0] || null);
+                        setUploadError('');
+                      }}
+                      disabled={isSaving || isUploadingImage}
+                      className="hidden"
+                    />
+                    Chọn ảnh
+                  </label>
+                  <Button type="button" variant="outline" onClick={() => void handleUploadImage()} disabled={isSaving || isUploadingImage}>
+                    {isUploadingImage ? 'Đang upload...' : 'Upload ảnh'}
+                  </Button>
+                </div>
+              ) : null}
+              <div className="text-xs text-slate-500">{selectedImageFile ? selectedImageFile.name : 'Chưa chọn tệp ảnh.'}</div>
+              {uploadError ? <div className="text-xs text-red-600">{uploadError}</div> : null}
+            </div>
           </Field>
           <Field label="Thứ tự">
             <Input

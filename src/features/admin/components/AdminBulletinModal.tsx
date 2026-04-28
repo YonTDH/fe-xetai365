@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { sanitizeHtml } from '@/lib/sanitizeHtml';
-import type { AdminBulletin, AdminBulletinPayload, AdminBulletinStatus, AdminBulletinType } from '../api/adminApi';
+import { uploadAdminImage, type AdminBulletin, type AdminBulletinPayload, type AdminBulletinStatus, type AdminBulletinType } from '../api/adminApi';
 
 type AdminBulletinModalProps = {
   item: AdminBulletin | null;
@@ -106,11 +106,17 @@ export function AdminBulletinModal({
   onSave,
 }: AdminBulletinModalProps) {
   const [form, setForm] = useState<FormState>(() => createEmptyForm(type));
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [uploadError, setUploadError] = useState('');
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setForm(item ? mapBulletinToForm(item) : createEmptyForm(type));
+    setSelectedImageFile(null);
+    setIsUploadingImage(false);
+    setUploadError('');
   }, [item, open, type]);
 
   useEffect(() => {
@@ -141,6 +147,28 @@ export function AdminBulletinModal({
       ...form,
       bulletinType: type,
     });
+  };
+
+  const handleUploadImage = async () => {
+    if (!selectedImageFile) {
+      setUploadError('Vui lòng chọn ảnh trước khi upload.');
+      return;
+    }
+
+    const folder =
+      type === 'recruitment' ? 'recruitment' : type === 'news_event' ? 'news' : 'promotions';
+
+    try {
+      setIsUploadingImage(true);
+      setUploadError('');
+      const uploaded = await uploadAdminImage(selectedImageFile, folder);
+      handleChange('imageUrl', uploaded.imageUrl);
+      setSelectedImageFile(null);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Không thể upload ảnh.');
+    } finally {
+      setIsUploadingImage(false);
+    }
   };
 
   return (
@@ -201,7 +229,31 @@ export function AdminBulletinModal({
                 />
               </Field>
               <Field label="Ảnh đại diện">
-                <Input value={form.imageUrl} onChange={(event) => handleChange('imageUrl', event.target.value)} readOnly={isReadOnly || isSaving} />
+                <div className="space-y-3">
+                  <Input value={form.imageUrl} onChange={(event) => handleChange('imageUrl', event.target.value)} readOnly={isReadOnly || isSaving} />
+                  {!isReadOnly ? (
+                    <div className="flex flex-wrap items-center gap-3">
+                      <label className="inline-flex cursor-pointer items-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(event) => {
+                            setSelectedImageFile(event.target.files?.[0] || null);
+                            setUploadError('');
+                          }}
+                          disabled={isSaving || isUploadingImage}
+                          className="hidden"
+                        />
+                        Chọn ảnh
+                      </label>
+                      <Button type="button" variant="outline" onClick={() => void handleUploadImage()} disabled={isSaving || isUploadingImage}>
+                        {isUploadingImage ? 'Đang upload...' : 'Upload ảnh'}
+                      </Button>
+                    </div>
+                  ) : null}
+                  <div className="text-xs text-slate-500">{selectedImageFile ? selectedImageFile.name : 'Chưa chọn tệp ảnh.'}</div>
+                  {uploadError ? <div className="text-xs text-red-600">{uploadError}</div> : null}
+                </div>
               </Field>
               <Field label="Thứ tự">
                 <Input
