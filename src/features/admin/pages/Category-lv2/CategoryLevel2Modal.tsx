@@ -11,6 +11,7 @@ type CategoryLevel2ModalProps = {
   open: boolean;
   isSaving?: boolean;
   onClose: () => void;
+  onEdit?: () => void;
   onSave: (nextItem: Pick<AdminVehicleCategory, 'id' | 'parentId' | 'name' | 'slug' | 'isVisible' | 'description' | 'sortOrder'>) => void;
 };
 
@@ -46,6 +47,7 @@ export function CategoryLevel2Modal({
   open,
   isSaving = false,
   onClose,
+  onEdit,
   onSave,
 }: CategoryLevel2ModalProps) {
   const [form, setForm] = useState<FormState>(createFormState(item));
@@ -160,6 +162,11 @@ export function CategoryLevel2Modal({
           <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
             Đóng
           </Button>
+          {isReadOnly ? (
+            <Button type="button" onClick={onEdit} disabled={isSaving || !onEdit}>
+              Sửa
+            </Button>
+          ) : null}
           {!isReadOnly ? (
             <Button type="button" onClick={handleSubmit} disabled={isSaving}>
               {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}

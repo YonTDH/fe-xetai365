@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Eye, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { CheckCircle2, Circle, Eye, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAppToast } from '@/components/ui/toast';
@@ -37,6 +37,25 @@ type DeleteState = {
   title: string;
 } | null;
 
+function translateProductStatus(status: string) {
+  switch (status) {
+    case 'available':
+      return 'Đang bán';
+    case 'sold':
+      return 'Đã bán';
+    case 'sold_out':
+      return 'Hết hàng';
+    case 'coming_soon':
+      return 'Sắp về';
+    case 'draft':
+      return 'Bản nháp';
+    case 'hidden':
+      return 'Đã ẩn';
+    default:
+      return status;
+  }
+}
+
 function mapProductToRow(item: AdminProduct): ProductRow {
   return {
     id: item.id,
@@ -45,8 +64,16 @@ function mapProductToRow(item: AdminProduct): ProductRow {
     brand: item.brand,
     priceVnd: item.priceVnd,
     isVisible: item.isVisible,
-    status: item.status,
+    status: translateProductStatus(item.status),
   };
+}
+
+function renderVisibilityIcon(isVisible: boolean, label: string) {
+  return (
+    <span className="inline-flex" aria-label={label} title={label}>
+      {isVisible ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <Circle className="h-5 w-5 text-slate-400" />}
+    </span>
+  );
 }
 
 export function AdminProductsPage() {
@@ -102,19 +129,28 @@ export function AdminProductsPage() {
     return rows.filter((row) => {
       const source = `${row.title} ${row.categoryName} ${row.brand}`.toLowerCase();
       const matchesKeyword = !normalizedKeyword || source.includes(normalizedKeyword);
-      const matchesStatus =
-        statusFilter === 'all' || (statusFilter === 'visible' ? row.isVisible : !row.isVisible);
-      const matchesCategory =
-        categoryFilter === 0 || items.find((item) => item.id === row.id)?.categoryLevel2Id === categoryFilter;
+      const matchesStatus = statusFilter === 'all' || (statusFilter === 'visible' ? row.isVisible : !row.isVisible);
+      const matchesCategory = categoryFilter === 0 || items.find((item) => item.id === row.id)?.categoryLevel2Id === categoryFilter;
 
       return matchesKeyword && matchesStatus && matchesCategory;
     });
   }, [categoryFilter, items, keyword, rows, statusFilter]);
 
-  const allSelected = filteredRows.length > 0 && selectedIds.length === filteredRows.length;
+  const filteredRowIds = useMemo(() => filteredRows.map((row) => row.id), [filteredRows]);
+  const selectedFilteredIds = useMemo(
+    () => selectedIds.filter((id) => filteredRowIds.includes(id)),
+    [filteredRowIds, selectedIds]
+  );
+  const allSelected = filteredRows.length > 0 && selectedFilteredIds.length === filteredRows.length;
 
   const toggleSelectAll = () => {
-    setSelectedIds((prev) => (prev.length === filteredRows.length ? [] : filteredRows.map((row) => row.id)));
+    setSelectedIds((prev) => {
+      if (allSelected) {
+        return prev.filter((id) => !filteredRowIds.includes(id));
+      }
+
+      return Array.from(new Set([...prev, ...filteredRowIds]));
+    });
   };
 
   const toggleSelectOne = (id: number) => {
@@ -134,6 +170,10 @@ export function AdminProductsPage() {
   const closeModal = () => {
     if (isSaving) return;
     setModalState(null);
+  };
+
+  const switchModalToEdit = () => {
+    setModalState((prev) => (prev?.item ? { mode: 'edit', item: prev.item } : prev));
   };
 
   const handleSaveProduct = async (payload: AdminProductPayload) => {
@@ -187,6 +227,77 @@ export function AdminProductsPage() {
     }
   };
 
+  const selectedItems = useMemo(
+    () => items.filter((item) => selectedIds.includes(item.id)),
+    [items, selectedIds]
+  );
+
+  const handleBulkVisibilityChange = async (isVisible: boolean) => {
+    if (!selectedItems.length) return;
+
+    try {
+      setIsSaving(true);
+      setError('');
+      await Promise.all(
+        selectedItems.map((item) =>
+          updateAdminProduct(item.id, {
+            categoryLevel2Id: item.categoryLevel2Id,
+            productCode: item.productCode,
+            slug: item.slug,
+            title: item.title,
+            shortDescription: item.shortDescription,
+            content: item.content,
+            brand: item.brand,
+            status: item.status,
+            priceVnd: item.priceVnd,
+            location: item.location,
+            imageUrl: item.imageUrl,
+            isFeatured: item.isFeatured,
+            isVisible,
+            sortOrder: item.sortOrder,
+            titleSeo: item.titleSeo,
+            keywords: item.keywords,
+            metaDescription: item.metaDescription,
+          })
+        )
+      );
+      setSelectedIds([]);
+      await loadData();
+      showToast({
+        type: 'success',
+        message: `${isVisible ? 'Đã hiển thị' : 'Đã ẩn'} ${selectedItems.length} sản phẩm.`,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể cập nhật trạng thái hiển thị.';
+      setError(message);
+      showToast({ type: 'error', message });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedItems.length) return;
+
+    try {
+      setIsSaving(true);
+      setError('');
+      await Promise.all(selectedItems.map((item) => deleteAdminProduct(item.id)));
+      setSelectedIds([]);
+      await loadData();
+      showToast({
+        type: 'success',
+        message: `Đã xóa ${selectedItems.length} sản phẩm.`,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể xóa sản phẩm đã chọn.';
+      setError(message);
+      showToast({ type: 'error', message });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const columns = useMemo<AdminTableColumn<ProductRow>[]>(
     () => [
       {
@@ -222,18 +333,32 @@ export function AdminProductsPage() {
         key: 'isVisible',
         title: 'Hiển thị',
         align: 'center',
-        render: (row) => <input type="checkbox" checked={row.isVisible} readOnly onClick={(event) => event.stopPropagation()} className="h-4 w-4 rounded border-slate-300" />,
+        render: (row) => (
+          <div className="flex justify-center" onClick={(event) => event.stopPropagation()}>
+            {renderVisibilityIcon(row.isVisible, `Trạng thái hiển thị của sản phẩm ${row.title}`)}
+          </div>
+        ),
       },
       {
         key: 'status',
         title: 'Trạng thái',
         sortable: true,
         align: 'center',
-        render: (row) => (
-          <Badge variant="outline" className={row.isVisible ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-100 text-slate-600'}>
-            {row.status}
-          </Badge>
-        ),
+        render: (row) => {
+          let className = 'border-emerald-200 bg-emerald-50 text-emerald-700';
+
+          if (row.status === 'Đã bán') {
+            className = 'border-amber-200 bg-amber-50 text-amber-700';
+          } else if (!row.isVisible) {
+            className = 'border-slate-200 bg-slate-100 text-slate-600';
+          }
+
+          return (
+            <Badge variant="outline" className={className}>
+              {row.status}
+            </Badge>
+          );
+        },
       },
       {
         key: 'actions',
@@ -261,7 +386,7 @@ export function AdminProductsPage() {
         ),
       },
     ],
-    [allSelected, filteredRows.length, isDeletingId, selectedIds]
+    [allSelected, isDeletingId, selectedIds]
   );
 
   return (
@@ -270,8 +395,6 @@ export function AdminProductsPage() {
         {error ? <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
 
         <AdminDataTable
-          title="Sản phẩm"
-          description="Quản trị danh sách sản phẩm, trạng thái hiển thị và thông tin phân loại."
           columns={columns}
           data={filteredRows}
           loading={isLoading}
@@ -303,12 +426,30 @@ export function AdminProductsPage() {
             />
           }
           toolbar={
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" onClick={() => void loadData()} disabled={isLoading || isSaving || isDeletingId !== null}>
+            <div className="flex flex-wrap items-center gap-2">
+              {selectedIds.length > 0 ? (
+                <>
+                  <Button type="button" onClick={() => void handleBulkVisibilityChange(false)} disabled={isLoading || isSaving || isDeletingId !== null} className="bg-[#135a91] text-white hover:bg-[#0f4b78]">
+                    Ẩn
+                  </Button>
+                  <Button type="button" onClick={() => void handleBulkVisibilityChange(true)} disabled={isLoading || isSaving || isDeletingId !== null} className="bg-[#135a91] text-white hover:bg-[#0f4b78]">
+                    Hiển thị
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => void handleBulkDelete()}
+                    disabled={isLoading || isSaving || isDeletingId !== null}
+                    className="bg-[#135a91] text-white hover:bg-[#0f4b78]"
+                  >
+                    Xóa
+                  </Button>
+                </>
+              ) : null}
+              <Button type="button" onClick={() => void loadData()} disabled={isLoading || isSaving || isDeletingId !== null} className="bg-[#135a91] text-white hover:bg-[#0f4b78]">
                 <RefreshCw className={['h-4 w-4', isLoading ? 'animate-spin' : ''].join(' ')} />
                 {isLoading ? 'Đang tải...' : 'Tải lại'}
               </Button>
-              <Button type="button" onClick={openCreateModal} disabled={isLoading || isSaving || categoryLevel2Options.length === 0}>
+              <Button type="button" onClick={openCreateModal} disabled={isLoading || isSaving || categoryLevel2Options.length === 0} className="bg-[#135a91] text-white hover:bg-[#0f4b78]">
                 <Plus className="h-4 w-4" />
                 Thêm sản phẩm
               </Button>
@@ -324,6 +465,7 @@ export function AdminProductsPage() {
         mode={modalState?.mode ?? 'view'}
         isSaving={isSaving}
         onClose={closeModal}
+        onEdit={switchModalToEdit}
         onSave={handleSaveProduct}
       />
 

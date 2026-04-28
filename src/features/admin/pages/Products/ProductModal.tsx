@@ -11,10 +11,30 @@ type ProductModalProps = {
   open: boolean;
   isSaving?: boolean;
   onClose: () => void;
+  onEdit?: () => void;
   onSave: (payload: AdminProductPayload) => void;
 };
 
 type FormState = AdminProductPayload;
+
+function translateProductStatus(status: string) {
+  switch (status) {
+    case 'available':
+      return 'Đang bán';
+    case 'sold':
+      return 'Đã bán';
+    case 'sold_out':
+      return 'Hết hàng';
+    case 'coming_soon':
+      return 'Sắp về';
+    case 'draft':
+      return 'Bản nháp';
+    case 'hidden':
+      return 'Đã ẩn';
+    default:
+      return status;
+  }
+}
 
 function createFormState(item: AdminProduct | null, defaultCategoryLevel2Id: number): FormState {
   return {
@@ -54,6 +74,7 @@ export function ProductModal({
   open,
   isSaving = false,
   onClose,
+  onEdit,
   onSave,
 }: ProductModalProps) {
   const categoryLevel2Options = useMemo(
@@ -152,7 +173,11 @@ export function ProductModal({
             <Input value={form.priceVnd} onChange={(event) => handleChange('priceVnd', event.target.value)} readOnly={isReadOnly || isSaving} />
           </Field>
           <Field label="Trạng thái">
-            <Input value={form.status} onChange={(event) => handleChange('status', event.target.value)} readOnly={isReadOnly || isSaving} />
+            <Input
+              value={isReadOnly ? translateProductStatus(form.status) : form.status}
+              onChange={(event) => handleChange('status', event.target.value)}
+              readOnly={isReadOnly || isSaving}
+            />
           </Field>
           <Field label="Hãng">
             <Input value={form.brand} onChange={(event) => handleChange('brand', event.target.value)} readOnly={isReadOnly || isSaving} />
@@ -209,6 +234,11 @@ export function ProductModal({
           <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
             Đóng
           </Button>
+          {isReadOnly ? (
+            <Button type="button" onClick={onEdit} disabled={isSaving || !onEdit}>
+              Sửa
+            </Button>
+          ) : null}
           {!isReadOnly ? (
             <Button type="button" onClick={handleSubmit} disabled={isSaving}>
               {isSaving ? 'Đang lưu...' : mode === 'create' ? 'Tạo sản phẩm' : 'Lưu thay đổi'}

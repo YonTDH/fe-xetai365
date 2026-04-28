@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Eye, Pencil, RefreshCw, Trash2 } from 'lucide-react';
+import { CheckCircle2, Circle, Eye, Pencil, RefreshCw, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAppToast } from '@/components/ui/toast';
@@ -53,6 +53,14 @@ function mapCategoryToRow(item: AdminVehicleCategory & { parentName: string }): 
   };
 }
 
+function renderVisibilityIcon(isVisible: boolean, label: string) {
+  return (
+    <span className="inline-flex" aria-label={label} title={label}>
+      {isVisible ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <Circle className="h-5 w-5 text-slate-400" />}
+    </span>
+  );
+}
+
 export function AdminCategoryLevel2Page() {
   const { showToast } = useAppToast();
   const [items, setItems] = useState<AdminVehicleCategory[]>([]);
@@ -65,6 +73,7 @@ export function AdminCategoryLevel2Page() {
   const [deleteState, setDeleteState] = useState<DeleteState>(null);
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'visible' | 'hidden'>('all');
+  const [parentCategoryFilter, setParentCategoryFilter] = useState<number>(0);
 
   const loadItems = useCallback(async () => {
     try {
@@ -85,6 +94,14 @@ export function AdminCategoryLevel2Page() {
   }, [loadItems]);
 
   const level2Items = useMemo(() => flattenLevel2Categories(items), [items]);
+  const parentCategoryOptions = useMemo(
+    () =>
+      items.map((item) => ({
+        id: item.id,
+        name: item.name,
+      })),
+    [items]
+  );
   const rows = useMemo(() => level2Items.map(mapCategoryToRow), [level2Items]);
   const filteredRows = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -94,17 +111,28 @@ export function AdminCategoryLevel2Page() {
         !normalizedKeyword ||
         row.name.toLowerCase().includes(normalizedKeyword) ||
         row.parentName.toLowerCase().includes(normalizedKeyword);
-      const matchesStatus =
-        statusFilter === 'all' || (statusFilter === 'visible' ? row.isVisible : !row.isVisible);
+      const matchesStatus = statusFilter === 'all' || (statusFilter === 'visible' ? row.isVisible : !row.isVisible);
+      const matchesParentCategory = parentCategoryFilter === 0 || row.parentId === parentCategoryFilter;
 
-      return matchesKeyword && matchesStatus;
+      return matchesKeyword && matchesStatus && matchesParentCategory;
     });
-  }, [keyword, rows, statusFilter]);
+  }, [keyword, parentCategoryFilter, rows, statusFilter]);
 
-  const allSelected = filteredRows.length > 0 && selectedIds.length === filteredRows.length;
+  const filteredRowIds = useMemo(() => filteredRows.map((row) => row.id), [filteredRows]);
+  const selectedFilteredIds = useMemo(
+    () => selectedIds.filter((id) => filteredRowIds.includes(id)),
+    [filteredRowIds, selectedIds]
+  );
+  const allSelected = filteredRows.length > 0 && selectedFilteredIds.length === filteredRows.length;
 
   const toggleSelectAll = () => {
-    setSelectedIds((prev) => (prev.length === filteredRows.length ? [] : filteredRows.map((row) => row.id)));
+    setSelectedIds((prev) => {
+      if (allSelected) {
+        return prev.filter((id) => !filteredRowIds.includes(id));
+      }
+
+      return Array.from(new Set([...prev, ...filteredRowIds]));
+    });
   };
 
   const toggleSelectOne = (id: number) => {
@@ -122,6 +150,10 @@ export function AdminCategoryLevel2Page() {
   const closeModal = () => {
     if (isSaving) return;
     setModalState(null);
+  };
+
+  const switchModalToEdit = () => {
+    setModalState((prev) => (prev?.item ? { mode: 'edit', item: prev.item } : prev));
   };
 
   const handleSaveCategory = async (
@@ -193,6 +225,66 @@ export function AdminCategoryLevel2Page() {
     }
   };
 
+  const selectedItems = useMemo(
+    () => level2Items.filter((item) => selectedIds.includes(item.id)),
+    [level2Items, selectedIds]
+  );
+
+  const handleBulkVisibilityChange = async (isVisible: boolean) => {
+    if (!selectedItems.length) return;
+
+    try {
+      setIsSaving(true);
+      setError('');
+      await Promise.all(
+        selectedItems.map((item) =>
+          updateAdminVehicleCategoryLevel2(item.id, {
+            parentId: item.parentId || 0,
+            name: item.name,
+            slug: item.slug,
+            isVisible,
+            description: item.description,
+            sortOrder: item.sortOrder,
+          })
+        )
+      );
+      setSelectedIds([]);
+      await loadItems();
+      showToast({
+        type: 'success',
+        message: `${isVisible ? 'Đã hiển thị' : 'Đã ẩn'} ${selectedItems.length} danh mục cấp 2.`,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể cập nhật trạng thái hiển thị.';
+      setError(message);
+      showToast({ type: 'error', message });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedItems.length) return;
+
+    try {
+      setIsSaving(true);
+      setError('');
+      await Promise.all(selectedItems.map((item) => deleteAdminVehicleCategoryLevel2(item.id)));
+      setSelectedIds([]);
+      await loadItems();
+      showToast({
+        type: 'success',
+        message: `Đã xóa ${selectedItems.length} danh mục cấp 2.`,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể xóa danh mục cấp 2 đã chọn.';
+      setError(message);
+      showToast({ type: 'error', message });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const columns = useMemo<AdminTableColumn<CategoryLevel2Row>[]>(
     () => [
       {
@@ -237,14 +329,9 @@ export function AdminCategoryLevel2Page() {
         title: 'Hiển thị',
         align: 'center',
         render: (row) => (
-          <input
-            type="checkbox"
-            aria-label={`Trạng thái hiển thị của danh mục ${row.name}`}
-            checked={row.isVisible}
-            readOnly
-            onClick={(event) => event.stopPropagation()}
-            className="h-4 w-4 rounded border-slate-300"
-          />
+          <div className="flex justify-center" onClick={(event) => event.stopPropagation()}>
+            {renderVisibilityIcon(row.isVisible, `Trạng thái hiển thị của danh mục ${row.name}`)}
+          </div>
         ),
       },
       {
@@ -318,7 +405,7 @@ export function AdminCategoryLevel2Page() {
         ),
       },
     ],
-    [allSelected, filteredRows.length, isDeletingId, selectedIds]
+    [allSelected, isDeletingId, selectedIds]
   );
 
   return (
@@ -327,8 +414,6 @@ export function AdminCategoryLevel2Page() {
         {error ? <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
 
         <AdminDataTable
-          title="Danh mục cấp 2"
-          description="Dữ liệu đang lấy từ cây danh mục quản trị để phục vụ cập nhật danh mục cấp 2."
           columns={columns}
           data={filteredRows}
           loading={isLoading}
@@ -342,12 +427,44 @@ export function AdminCategoryLevel2Page() {
               keywordPlaceholder="Tìm theo tên danh mục cấp 2 hoặc cấp 1..."
               status={statusFilter}
               onStatusChange={(value) => setStatusFilter(value as 'all' | 'visible' | 'hidden')}
+              extraFilters={
+                <select
+                  value={parentCategoryFilter}
+                  onChange={(event) => setParentCategoryFilter(Number(event.target.value))}
+                  className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
+                >
+                  <option value={0}>Tất cả danh mục cấp 1</option>
+                  {parentCategoryOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.name}
+                    </option>
+                  ))}
+                </select>
+              }
               summary={`Hiển thị ${filteredRows.length}/${rows.length} danh mục cấp 2`}
             />
           }
           toolbar={
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" onClick={() => void loadItems()} disabled={isLoading || isSaving || isDeletingId !== null}>
+            <div className="flex flex-wrap items-center gap-2">
+              {selectedIds.length > 0 ? (
+                <>
+                  <Button type="button" onClick={() => void handleBulkVisibilityChange(false)} disabled={isLoading || isSaving || isDeletingId !== null} className="bg-[#135a91] text-white hover:bg-[#0f4b78]">
+                    Ẩn
+                  </Button>
+                  <Button type="button" onClick={() => void handleBulkVisibilityChange(true)} disabled={isLoading || isSaving || isDeletingId !== null} className="bg-[#135a91] text-white hover:bg-[#0f4b78]">
+                    Hiển thị
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => void handleBulkDelete()}
+                    disabled={isLoading || isSaving || isDeletingId !== null}
+                    className="bg-[#135a91] text-white hover:bg-[#0f4b78]"
+                  >
+                    Xóa
+                  </Button>
+                </>
+              ) : null}
+              <Button type="button" onClick={() => void loadItems()} disabled={isLoading || isSaving || isDeletingId !== null} className="bg-[#135a91] text-white hover:bg-[#0f4b78]">
                 <RefreshCw className={['h-4 w-4', isLoading ? 'animate-spin' : ''].join(' ')} />
                 {isLoading ? 'Đang tải...' : 'Tải lại'}
               </Button>
@@ -364,6 +481,7 @@ export function AdminCategoryLevel2Page() {
         mode={modalState?.mode ?? 'view'}
         isSaving={isSaving}
         onClose={closeModal}
+        onEdit={switchModalToEdit}
         onSave={handleSaveCategory}
       />
 
