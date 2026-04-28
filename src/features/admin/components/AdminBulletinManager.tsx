@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Plus, RefreshCw, Save, Trash2 } from 'lucide-react';
+import { CheckCircle2, Circle, Eye, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { sanitizeHtml } from '@/lib/sanitizeHtml';
+import { useAppToast } from '@/components/ui/toast';
 import {
   createAdminBulletin,
   deleteAdminBulletin,
@@ -15,6 +14,9 @@ import {
   type AdminBulletinStatus,
   type AdminBulletinType,
 } from '../api/adminApi';
+import { AdminDataTable, type AdminTableColumn } from './AdminDataTable';
+import { AdminTableFilters } from './AdminTableFilters';
+import { AdminBulletinModal } from './AdminBulletinModal';
 
 type AdminBulletinManagerProps = {
   type: AdminBulletinType;
@@ -22,24 +24,48 @@ type AdminBulletinManagerProps = {
   description: string;
 };
 
-type FormState = AdminBulletinPayload;
+type BulletinRow = {
+  id: number;
+  title: string;
+  slug: string;
+  publishedAt: string;
+  isVisible: boolean;
+  isFeatured: boolean;
+  status: AdminBulletinStatus;
+  statusLabel: string;
+};
 
-function slugify(value: string) {
-  return value
-    .trim()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+type ModalState = {
+  mode: 'view' | 'edit' | 'create';
+  item: AdminBulletin | null;
+} | null;
+
+type DeleteState = {
+  id: number;
+  title: string;
+} | null;
+
+function translateBulletinStatus(status: AdminBulletinStatus) {
+  switch (status) {
+    case 'draft':
+      return 'Bản nháp';
+    case 'published':
+      return 'Hiển thị';
+    case 'archived':
+      return 'Lưu trữ';
+    default:
+      return status;
+  }
 }
 
-function formatDateTimeLocal(value: string | null) {
-  if (!value) return '';
+function formatPublishedAt(value: string | null) {
+  if (!value) return 'Chưa đặt lịch';
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 16);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('vi-VN', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(date);
 }
 
 function toIsoDateTime(value: string) {
@@ -49,34 +75,7 @@ function toIsoDateTime(value: string) {
   return new Date(value).toISOString();
 }
 
-function hasHtml(value: string) {
-  return /<\/?[a-z][\s\S]*>/i.test(value);
-}
-
-function createEmptyForm(type: AdminBulletinType): FormState {
-  const now = new Date();
-  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-
-  return {
-    title: '',
-    slug: '',
-    bulletinType: type,
-    status: 'published',
-    excerpt: '',
-    descriptionShort: '',
-    content: '',
-    imageUrl: '',
-    sortOrder: 1,
-    isFeatured: false,
-    isVisible: true,
-    publishedAt: local.toISOString().slice(0, 16),
-    titleSeo: '',
-    keywords: '',
-    metaDescription: '',
-  };
-}
-
-function mapBulletinToForm(item: AdminBulletin): FormState {
+function mapBulletinToPayload(item: AdminBulletin, overrides?: Partial<AdminBulletinPayload>): AdminBulletinPayload {
   return {
     title: item.title,
     slug: item.slug,
@@ -89,31 +88,47 @@ function mapBulletinToForm(item: AdminBulletin): FormState {
     sortOrder: item.sortOrder || 1,
     isFeatured: item.isFeatured,
     isVisible: item.isVisible,
-    publishedAt: formatDateTimeLocal(item.publishedAt),
+    publishedAt: item.publishedAt || new Date().toISOString(),
     titleSeo: item.titleSeo,
     keywords: item.keywords,
     metaDescription: item.metaDescription,
+    ...overrides,
   };
 }
 
-export function AdminBulletinManager({ type, heading, description }: AdminBulletinManagerProps) {
+function mapBulletinToRow(item: AdminBulletin): BulletinRow {
+  return {
+    id: item.id,
+    title: item.title,
+    slug: item.slug,
+    publishedAt: formatPublishedAt(item.publishedAt),
+    isVisible: item.isVisible,
+    isFeatured: item.isFeatured,
+    status: item.status,
+    statusLabel: translateBulletinStatus(item.status),
+  };
+}
+
+function renderVisibilityIcon(isVisible: boolean, label: string) {
+  return (
+    <span className="inline-flex" aria-label={label} title={label}>
+      {isVisible ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <Circle className="h-5 w-5 text-slate-400" />}
+    </span>
+  );
+}
+
+export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProps) {
+  const { showToast } = useAppToast();
   const [items, setItems] = useState<AdminBulletin[]>([]);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [form, setForm] = useState<FormState>(() => createEmptyForm(type));
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const [slugTouched, setSlugTouched] = useState(false);
-
-  const statusOptions: Array<{ value: AdminBulletinStatus; label: string }> = useMemo(
-    () => [
-      { value: 'draft', label: 'Nháp' },
-      { value: 'published', label: 'Hiển thị' },
-      { value: 'archived', label: 'Lưu trữ' },
-    ],
-    [],
-  );
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [modalState, setModalState] = useState<ModalState>(null);
+  const [deleteState, setDeleteState] = useState<DeleteState>(null);
+  const [keyword, setKeyword] = useState('');
+  const [visibilityFilter, setVisibilityFilter] = useState<'all' | 'visible' | 'hidden'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | AdminBulletinStatus>('all');
 
   const loadItems = useCallback(async () => {
     try {
@@ -121,331 +136,427 @@ export function AdminBulletinManager({ type, heading, description }: AdminBullet
       setError('');
       const data = await listAdminBulletins(type);
       setItems(data);
-
-      if (selectedId) {
-        const exists = data.some((item) => item.id === selectedId);
-        if (!exists) {
-          setSelectedId(null);
-          setForm(createEmptyForm(type));
-          setSlugTouched(false);
-        }
-      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể tải danh sách bài viết.');
       setItems([]);
+      setError(err instanceof Error ? err.message : 'Không thể tải danh sách bài viết.');
     } finally {
       setIsLoading(false);
     }
-  }, [selectedId, type]);
+  }, [type]);
 
   useEffect(() => {
-    setSelectedId(null);
-    setForm(createEmptyForm(type));
-    setSlugTouched(false);
-    setMessage('');
-    setError('');
+    setSelectedIds([]);
+    setModalState(null);
+    setDeleteState(null);
+    setKeyword('');
+    setVisibilityFilter('all');
+    setStatusFilter('all');
     void loadItems();
   }, [loadItems, type]);
 
-  const handleCreateNew = () => {
-    setSelectedId(null);
-    setForm(createEmptyForm(type));
-    setSlugTouched(false);
-    setMessage('');
-    setError('');
-  };
+  const rows = useMemo(() => items.map(mapBulletinToRow), [items]);
+  const filteredRows = useMemo(() => {
+    const normalizedKeyword = keyword.trim().toLowerCase();
 
-  const handleEdit = async (id: number) => {
-    try {
-      setError('');
-      const detail = await getAdminBulletinDetail(id);
-      setSelectedId(detail.id);
-      setForm(mapBulletinToForm(detail));
-      setSlugTouched(true);
-      setMessage('');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể tải chi tiết bài viết.');
-    }
-  };
+    return rows.filter((row) => {
+      const source = `${row.title} ${row.slug} ${row.statusLabel}`.toLowerCase();
+      const matchesKeyword = !normalizedKeyword || source.includes(normalizedKeyword);
+      const matchesVisibility =
+        visibilityFilter === 'all' || (visibilityFilter === 'visible' ? row.isVisible : !row.isVisible);
+      const matchesStatus = statusFilter === 'all' || row.status === statusFilter;
 
-  const handleChange = <K extends keyof FormState>(key: K, value: FormState[K]) => {
-    setForm((prev) => {
-      const next = {
-        ...prev,
-        [key]: value,
-      };
+      return matchesKeyword && matchesVisibility && matchesStatus;
+    });
+  }, [keyword, rows, statusFilter, visibilityFilter]);
 
-      if (key === 'title' && !slugTouched) {
-        next.slug = slugify(String(value));
+  const filteredRowIds = useMemo(() => filteredRows.map((row) => row.id), [filteredRows]);
+  const selectedFilteredIds = useMemo(
+    () => selectedIds.filter((id) => filteredRowIds.includes(id)),
+    [filteredRowIds, selectedIds]
+  );
+  const allSelected = filteredRows.length > 0 && selectedFilteredIds.length === filteredRows.length;
+
+  const toggleSelectAll = () => {
+    setSelectedIds((prev) => {
+      if (allSelected) {
+        return prev.filter((id) => !filteredRowIds.includes(id));
       }
 
-      if (key === 'excerpt' && !prev.descriptionShort.trim()) {
-        next.descriptionShort = String(value);
-      }
-
-      if (key === 'title' && !prev.titleSeo.trim()) {
-        next.titleSeo = String(value);
-      }
-
-      if (key === 'excerpt' && !prev.metaDescription.trim()) {
-        next.metaDescription = String(value);
-      }
-
-      return next;
+      return Array.from(new Set([...prev, ...filteredRowIds]));
     });
   };
 
-  const handleSave = async () => {
+  const toggleSelectOne = (id: number) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
+  };
+
+  const selectedItems = useMemo(
+    () => items.filter((item) => selectedIds.includes(item.id)),
+    [items, selectedIds]
+  );
+
+  const openCreateModal = () => {
+    setModalState({ mode: 'create', item: null });
+  };
+
+  const openModal = async (mode: 'view' | 'edit', id: number) => {
+    try {
+      setIsLoading(true);
+      setError('');
+      const detail = await getAdminBulletinDetail(id);
+      setModalState({ mode, item: detail });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể tải chi tiết bài viết.';
+      setError(message);
+      showToast({ type: 'error', message });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const closeModal = () => {
+    if (isSaving) return;
+    setModalState(null);
+  };
+
+  const switchModalToEdit = () => {
+    setModalState((prev) => (prev?.item ? { mode: 'edit', item: prev.item } : prev));
+  };
+
+  const handleSave = async (payload: AdminBulletinPayload) => {
     try {
       setIsSaving(true);
       setError('');
-      setMessage('');
 
-      const payload: AdminBulletinPayload = {
-        ...form,
-        slug: slugify(form.slug || form.title),
+      const normalizedPayload = {
+        ...payload,
         bulletinType: type,
-        publishedAt: toIsoDateTime(form.publishedAt),
+        publishedAt: toIsoDateTime(payload.publishedAt),
       };
 
-      const saved = selectedId
-        ? await updateAdminBulletin(selectedId, payload)
-        : await createAdminBulletin(payload);
+      if (modalState?.mode === 'create') {
+        await createAdminBulletin(normalizedPayload);
+        showToast({ type: 'success', message: 'Đã tạo bài viết mới.' });
+      } else if (modalState?.item) {
+        await updateAdminBulletin(modalState.item.id, normalizedPayload);
+        showToast({ type: 'success', message: 'Đã cập nhật bài viết.' });
+      }
 
-      setSelectedId(saved.id);
-      setForm(mapBulletinToForm(saved));
-      setSlugTouched(true);
-      setMessage(selectedId ? 'Đã cập nhật bài viết.' : 'Đã tạo bài viết mới.');
+      setModalState(null);
       await loadItems();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể lưu bài viết.');
+      const message = err instanceof Error ? err.message : 'Không thể lưu bài viết.';
+      setError(message);
+      showToast({ type: 'error', message });
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDelete = async () => {
-    if (!selectedId) return;
-    const shouldDelete = typeof window !== 'undefined' ? window.confirm('Xóa bài viết này?') : false;
-    if (!shouldDelete) return;
+  const requestDelete = (row: BulletinRow) => {
+    setDeleteState({ id: row.id, title: row.title });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteState) return;
 
     try {
       setIsSaving(true);
       setError('');
-      setMessage('');
-      await deleteAdminBulletin(selectedId);
-      setSelectedId(null);
-      setForm(createEmptyForm(type));
-      setSlugTouched(false);
-      setMessage('Đã xóa bài viết.');
+      await deleteAdminBulletin(deleteState.id);
+      setSelectedIds((prev) => prev.filter((id) => id !== deleteState.id));
+      setDeleteState(null);
       await loadItems();
+      showToast({ type: 'success', message: 'Đã xóa bài viết.' });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể xóa bài viết.');
+      const message = err instanceof Error ? err.message : 'Không thể xóa bài viết.';
+      setError(message);
+      showToast({ type: 'error', message });
     } finally {
       setIsSaving(false);
     }
   };
 
-  const previewHtml = hasHtml(form.content);
+  const handleBulkVisibilityChange = async (isVisible: boolean) => {
+    if (!selectedItems.length) return;
 
-  return (
-    <div className="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
-      <Card className="border border-slate-200 bg-white shadow-sm">
-        <CardHeader className="border-b border-slate-200">
-          <div className="flex items-center justify-between gap-3">
-            <CardTitle className="text-lg font-bold text-slate-900">{heading}</CardTitle>
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => void loadItems()}>
-                <RefreshCw className="h-4 w-4" />
-                Tải lại
-              </Button>
-              <Button type="button" size="sm" onClick={handleCreateNew}>
-                <Plus className="h-4 w-4" />
-                Bài mới
-              </Button>
-            </div>
+    try {
+      setIsSaving(true);
+      setError('');
+      await Promise.all(
+        selectedItems.map((item) =>
+          updateAdminBulletin(
+            item.id,
+            mapBulletinToPayload(item, {
+              isVisible,
+            })
+          )
+        )
+      );
+      setSelectedIds([]);
+      await loadItems();
+      showToast({
+        type: 'success',
+        message: `${isVisible ? 'Đã hiển thị' : 'Đã ẩn'} ${selectedItems.length} bài viết.`,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể cập nhật trạng thái hiển thị.';
+      setError(message);
+      showToast({ type: 'error', message });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedItems.length) return;
+
+    try {
+      setIsSaving(true);
+      setError('');
+      await Promise.all(selectedItems.map((item) => deleteAdminBulletin(item.id)));
+      setSelectedIds([]);
+      await loadItems();
+      showToast({ type: 'success', message: `Đã xóa ${selectedItems.length} bài viết.` });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể xóa bài viết đã chọn.';
+      setError(message);
+      showToast({ type: 'error', message });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const columns = useMemo<AdminTableColumn<BulletinRow>[]>(
+    () => [
+      {
+        key: 'select',
+        title: (
+          <input
+            type="checkbox"
+            aria-label={`Chọn tất cả ${heading}`}
+            checked={allSelected}
+            onChange={toggleSelectAll}
+            className="h-4 w-4 rounded border-slate-300"
+          />
+        ),
+        width: '56px',
+        align: 'center',
+        headerClassName: 'w-14',
+        render: (row) => (
+          <input
+            type="checkbox"
+            aria-label={`Chọn bài ${row.title}`}
+            checked={selectedIds.includes(row.id)}
+            onChange={() => toggleSelectOne(row.id)}
+            onClick={(event) => event.stopPropagation()}
+            className="h-4 w-4 rounded border-slate-300"
+          />
+        ),
+      },
+      {
+        key: 'title',
+        title: 'Tiêu đề',
+        sortable: true,
+        render: (row) => <span className="text-slate-900">{row.title}</span>,
+      },
+      {
+        key: 'slug',
+        title: 'Slug',
+        sortable: true,
+        render: (row) => <span className="text-slate-600">{row.slug}</span>,
+      },
+      {
+        key: 'publishedAt',
+        title: 'Ngày đăng',
+        sortable: true,
+        render: (row) => <span className="text-slate-700">{row.publishedAt}</span>,
+      },
+      {
+        key: 'isVisible',
+        title: 'Hiển thị',
+        align: 'center',
+        render: (row) => (
+          <div className="flex justify-center" onClick={(event) => event.stopPropagation()}>
+            {renderVisibilityIcon(row.isVisible, `Trạng thái hiển thị của bài ${row.title}`)}
           </div>
-          <p className="text-sm leading-relaxed text-slate-600">{description}</p>
-        </CardHeader>
-        <CardContent className="space-y-3 pt-4">
-          {isLoading && <p className="text-sm text-slate-500">Đang tải danh sách...</p>}
-          {!isLoading && items.length === 0 && <p className="text-sm text-slate-500">Chưa có bài viết nào.</p>}
-          {items.map((item) => (
-            <button
-              key={item.id}
+        ),
+      },
+      {
+        key: 'statusLabel',
+        title: 'Trạng thái',
+        sortable: true,
+        align: 'center',
+        render: (row) => {
+          let className = 'border-emerald-200 bg-emerald-50 text-emerald-700';
+          if (row.status === 'draft') className = 'border-amber-200 bg-amber-50 text-amber-700';
+          if (row.status === 'archived') className = 'border-slate-200 bg-slate-100 text-slate-600';
+
+          return (
+            <Badge variant="outline" className={className}>
+              {row.statusLabel}
+            </Badge>
+          );
+        },
+      },
+      {
+        key: 'isFeatured',
+        title: 'Nổi bật',
+        align: 'center',
+        render: (row) => (
+          <Badge variant="outline" className={row.isFeatured ? 'border-sky-200 bg-sky-50 text-sky-700' : 'border-slate-200 bg-slate-100 text-slate-600'}>
+            {row.isFeatured ? 'Có' : 'Không'}
+          </Badge>
+        ),
+      },
+      {
+        key: 'actions',
+        title: 'Thao tác',
+        align: 'right',
+        render: (row) => (
+          <div className="flex items-center justify-end gap-2">
+            <Button
               type="button"
-              onClick={() => void handleEdit(item.id)}
-              className={[
-                'w-full rounded-xl border px-4 py-3 text-left transition-colors',
-                selectedId === item.id
-                  ? 'border-primary-500 bg-primary-50'
-                  : 'border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white',
-              ].join(' ')}
+              variant="outline"
+              size="icon-sm"
+              aria-label={`Xem bài ${row.title}`}
+              title={`Xem bài ${row.title}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                void openModal('view', row.id);
+              }}
+              disabled={isSaving}
             >
-              <div className="line-clamp-2 text-sm font-semibold text-slate-900">{item.title}</div>
-              <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
-                <span>{item.slug}</span>
-                <span>•</span>
-                <span>{item.status}</span>
-              </div>
-            </button>
-          ))}
-        </CardContent>
-      </Card>
-
-      <Card className="border border-slate-200 bg-white shadow-sm">
-        <CardHeader className="border-b border-slate-200">
-          <CardTitle className="text-lg font-bold text-slate-900">
-            {selectedId ? 'Chỉnh sửa nội dung' : 'Tạo nội dung mới'}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6 pt-5">
-          {(message || error) && (
-            <div className={['rounded-xl px-4 py-3 text-sm', error ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'].join(' ')}>
-              {error || message}
-            </div>
-          )}
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Tiêu đề">
-              <Input value={form.title} onChange={(e) => handleChange('title', e.target.value)} placeholder="Nhập tiêu đề..." />
-            </Field>
-            <Field label="Slug">
-              <Input
-                value={form.slug}
-                onChange={(e) => {
-                  setSlugTouched(true);
-                  handleChange('slug', e.target.value);
-                }}
-                placeholder="duong-dan-bai-viet"
-              />
-            </Field>
-            <Field label="Trạng thái">
-              <select
-                value={form.status}
-                onChange={(e) => handleChange('status', e.target.value as AdminBulletinStatus)}
-                aria-label="Trạng thái bài viết"
-                title="Trạng thái bài viết"
-                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-primary-500"
-              >
-                {statusOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Ngày đăng">
-              <Input type="datetime-local" value={form.publishedAt} onChange={(e) => handleChange('publishedAt', e.target.value)} />
-            </Field>
-            <Field label="Ảnh đại diện">
-              <Input value={form.imageUrl} onChange={(e) => handleChange('imageUrl', e.target.value)} placeholder="https://..." />
-            </Field>
-            <Field label="Thứ tự">
-              <Input
-                type="number"
-                min={1}
-                value={String(form.sortOrder)}
-                onChange={(e) => handleChange('sortOrder', Number(e.target.value) || 1)}
-              />
-            </Field>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
-              <input
-                type="checkbox"
-                checked={form.isVisible}
-                onChange={(e) => handleChange('isVisible', e.target.checked)}
-                className="h-4 w-4"
-              />
-              Hiển thị bài viết
-            </label>
-            <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
-              <input
-                type="checkbox"
-                checked={form.isFeatured}
-                onChange={(e) => handleChange('isFeatured', e.target.checked)}
-                className="h-4 w-4"
-              />
-              Đánh dấu nổi bật
-            </label>
-          </div>
-
-          <Field label="Mô tả ngắn">
-            <textarea
-              value={form.excerpt}
-              onChange={(e) => handleChange('excerpt', e.target.value)}
-              placeholder="Đoạn mô tả hiển thị ở trang danh sách..."
-              className="min-h-24 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-primary-500"
-            />
-          </Field>
-
-          <Field label="Nội dung bài viết">
-            <textarea
-              value={form.content}
-              onChange={(e) => handleChange('content', e.target.value)}
-              placeholder="Bạn có thể nhập text thường ở đây. Nếu có HTML thì hệ thống vẫn lưu và preview được."
-              className="min-h-64 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-primary-500"
-            />
-          </Field>
-
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <div className="mb-3 text-sm font-semibold text-slate-900">Xem trước nội dung</div>
-            {previewHtml ? (
-              <div
-                className="prose prose-slate max-w-none text-sm [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-md"
-                dangerouslySetInnerHTML={{ __html: sanitizeHtml(form.content) }}
-              />
-            ) : (
-              <div className="whitespace-pre-line text-sm leading-relaxed text-slate-700">{form.content || 'Chưa có nội dung.'}</div>
-            )}
-          </div>
-
-          <details className="rounded-xl border border-slate-200 bg-slate-50">
-            <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-900">SEO và metadata</summary>
-            <div className="grid gap-4 border-t border-slate-200 p-4 md:grid-cols-2">
-              <Field label="Title SEO">
-                <Input value={form.titleSeo} onChange={(e) => handleChange('titleSeo', e.target.value)} />
-              </Field>
-              <Field label="Keywords">
-                <Input value={form.keywords} onChange={(e) => handleChange('keywords', e.target.value)} />
-              </Field>
-              <div className="md:col-span-2">
-                <Field label="Meta description">
-                  <textarea
-                    value={form.metaDescription}
-                    onChange={(e) => handleChange('metaDescription', e.target.value)}
-                    className="min-h-24 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-primary-500"
-                  />
-                </Field>
-              </div>
-            </div>
-          </details>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Button type="button" onClick={() => void handleSave()} disabled={isSaving}>
-              <Save className="h-4 w-4" />
-              {selectedId ? 'Cập nhật' : 'Tạo mới'}
+              <Eye className="h-4 w-4" />
             </Button>
-            {selectedId && (
-              <Button type="button" variant="destructive" onClick={() => void handleDelete()} disabled={isSaving}>
-                <Trash2 className="h-4 w-4" />
-                Xóa bài
-              </Button>
-            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              aria-label={`Sửa bài ${row.title}`}
+              title={`Sửa bài ${row.title}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                void openModal('edit', row.id);
+              }}
+              disabled={isSaving}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              aria-label={`Xóa bài ${row.title}`}
+              title={`Xóa bài ${row.title}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                requestDelete(row);
+              }}
+              disabled={isSaving}
+              className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        ),
+      },
+    ],
+    [allSelected, heading, isSaving, selectedIds]
   );
-}
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="block space-y-2">
-      <span className="text-sm font-semibold text-slate-900">{label}</span>
-      {children}
-    </label>
+    <>
+      <div className="space-y-4">
+        {error ? <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
+
+        <AdminDataTable
+          columns={columns}
+          data={filteredRows}
+          loading={isLoading}
+          emptyText="Chưa có bài viết."
+          getRowKey={(row) => row.id}
+          onRowClick={(row) => void openModal('view', row.id)}
+          filters={
+            <AdminTableFilters
+              keyword={keyword}
+              onKeywordChange={setKeyword}
+              keywordPlaceholder="Tìm theo tiêu đề, slug hoặc trạng thái..."
+              status={visibilityFilter}
+              onStatusChange={(value) => setVisibilityFilter(value as 'all' | 'visible' | 'hidden')}
+              summary={`Hiển thị ${filteredRows.length}/${rows.length} bài viết`}
+              extraFilters={
+                <select
+                  value={statusFilter}
+                  onChange={(event) => setStatusFilter(event.target.value as 'all' | AdminBulletinStatus)}
+                  className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
+                >
+                  <option value="all">Tất cả trạng thái bài viết</option>
+                  <option value="draft">Bản nháp</option>
+                  <option value="published">Hiển thị</option>
+                  <option value="archived">Lưu trữ</option>
+                </select>
+              }
+            />
+          }
+          toolbar={
+            <div className="flex flex-wrap items-center gap-2">
+              {selectedIds.length > 0 ? (
+                <>
+                  <Button type="button" onClick={() => void handleBulkVisibilityChange(false)} disabled={isLoading || isSaving} className="bg-[#135a91] text-white hover:bg-[#0f4b78]">
+                    Ẩn
+                  </Button>
+                  <Button type="button" onClick={() => void handleBulkVisibilityChange(true)} disabled={isLoading || isSaving} className="bg-[#135a91] text-white hover:bg-[#0f4b78]">
+                    Hiển thị
+                  </Button>
+                  <Button type="button" onClick={() => void handleBulkDelete()} disabled={isLoading || isSaving} className="bg-[#135a91] text-white hover:bg-[#0f4b78]">
+                    Xóa
+                  </Button>
+                </>
+              ) : null}
+              <Button type="button" onClick={() => void loadItems()} disabled={isLoading || isSaving} className="bg-[#135a91] text-white hover:bg-[#0f4b78]">
+                <RefreshCw className={['h-4 w-4', isLoading ? 'animate-spin' : ''].join(' ')} />
+                {isLoading ? 'Đang tải...' : 'Tải lại'}
+              </Button>
+              <Button type="button" onClick={openCreateModal} disabled={isLoading || isSaving} className="bg-[#135a91] text-white hover:bg-[#0f4b78]">
+                <Plus className="h-4 w-4" />
+                Thêm bài viết
+              </Button>
+            </div>
+          }
+        />
+      </div>
+
+      <AdminBulletinModal
+        open={Boolean(modalState)}
+        item={modalState?.item ?? null}
+        mode={modalState?.mode ?? 'view'}
+        type={type}
+        isSaving={isSaving}
+        onClose={closeModal}
+        onEdit={switchModalToEdit}
+        onSave={handleSave}
+      />
+
+      {deleteState ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="space-y-2">
+              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-red-600">Xác nhận xóa</div>
+              <h3 className="text-xl font-black text-slate-950">{deleteState.title}</h3>
+              <p className="text-sm leading-6 text-slate-600">Hành động này sẽ xóa vĩnh viễn bài viết khỏi hệ thống quản trị.</p>
+            </div>
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <Button type="button" variant="outline" onClick={() => setDeleteState(null)} disabled={isSaving}>
+                Hủy
+              </Button>
+              <Button type="button" onClick={() => void handleConfirmDelete()} disabled={isSaving} className="bg-red-600 text-white hover:bg-red-700">
+                {isSaving ? 'Đang xóa...' : 'Xóa bài viết'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
