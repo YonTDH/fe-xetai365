@@ -51,6 +51,15 @@ export type AdminBulletinPayload = {
   metaDescription: string;
 };
 
+export type AdminBulletinDocxImportResult = {
+  title: string;
+  excerpt: string;
+  content: string;
+  imageUrl: string;
+  plainText: string;
+  warnings: string[];
+};
+
 export type AdminVehicleCategory = {
   id: number;
   slug: string;
@@ -319,7 +328,9 @@ function mapAdminSiteSetting(item: Record<string, unknown> | null | undefined): 
 async function adminFetch(path: string, init?: RequestInit) {
   const token = getAdminToken();
   const headers = new Headers(init?.headers || {});
-  headers.set('Content-Type', 'application/json');
+  if (!(init?.body instanceof FormData) && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
@@ -619,4 +630,44 @@ export async function uploadAdminImage(file: File, folder: AdminUploadFolder) {
     imageUrl,
     publicId: toSafeString(data.public_id),
   };
+}
+
+export async function importAdminBulletinDocx(file: File, type: AdminBulletinType) {
+  const formData = new FormData();
+  formData.set('file', file);
+  formData.set('type', type);
+
+  const data = (await adminFetch('/api/admin/bulletins/import-docx', {
+    method: 'POST',
+    body: formData,
+  })) as Record<string, unknown>;
+
+  return {
+    title: toSafeString(data.title),
+    excerpt: toSafeString(data.excerpt),
+    content: toSafeString(data.content),
+    imageUrl: toSafeString(data.imageUrl),
+    plainText: toSafeString(data.plainText),
+    warnings: Array.isArray(data.warnings) ? data.warnings.map((item) => toSafeString(item)).filter(Boolean) : [],
+  } satisfies AdminBulletinDocxImportResult;
+}
+
+export async function importAdminProductDocx(file: File) {
+  const formData = new FormData();
+  formData.set('file', file);
+  formData.set('type', 'products');
+
+  const data = (await adminFetch('/api/admin/bulletins/import-docx', {
+    method: 'POST',
+    body: formData,
+  })) as Record<string, unknown>;
+
+  return {
+    title: toSafeString(data.title),
+    excerpt: toSafeString(data.excerpt),
+    content: toSafeString(data.content),
+    imageUrl: toSafeString(data.imageUrl),
+    plainText: toSafeString(data.plainText),
+    warnings: Array.isArray(data.warnings) ? data.warnings.map((item) => toSafeString(item)).filter(Boolean) : [],
+  } satisfies AdminBulletinDocxImportResult;
 }
