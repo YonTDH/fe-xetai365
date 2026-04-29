@@ -36,6 +36,8 @@ export function AdminTableFilters({
         <select
           value={status}
           onChange={(event) => onStatusChange(event.target.value)}
+          aria-label="Lọc trạng thái hiển thị"
+          title="Lọc trạng thái hiển thị"
           className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-sky-300"
         >
           <option value="all">Tất cả trạng thái</option>

@@ -125,7 +125,7 @@ export function AdminCategoryLevel2Page() {
   );
   const allSelected = filteredRows.length > 0 && selectedFilteredIds.length === filteredRows.length;
 
-  const toggleSelectAll = () => {
+  const toggleSelectAll = useCallback(() => {
     setSelectedIds((prev) => {
       if (allSelected) {
         return prev.filter((id) => !filteredRowIds.includes(id));
@@ -133,19 +133,19 @@ export function AdminCategoryLevel2Page() {
 
       return Array.from(new Set([...prev, ...filteredRowIds]));
     });
-  };
+  }, [allSelected, filteredRowIds]);
 
   const toggleSelectOne = (id: number) => {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
   };
 
-  const findLevel2Item = (id: number) => level2Items.find((item) => item.id === id) || null;
+  const findLevel2Item = useCallback((id: number) => level2Items.find((item) => item.id === id) || null, [level2Items]);
 
-  const openModal = (mode: 'view' | 'edit', id: number) => {
+  const openModal = useCallback((mode: 'view' | 'edit', id: number) => {
     const item = findLevel2Item(id);
     if (!item) return;
     setModalState({ mode, item });
-  };
+  }, [findLevel2Item]);
 
   const closeModal = () => {
     if (isSaving) return;
@@ -405,7 +405,7 @@ export function AdminCategoryLevel2Page() {
         ),
       },
     ],
-    [allSelected, isDeletingId, selectedIds]
+    [allSelected, isDeletingId, openModal, selectedIds, toggleSelectAll]
   );
 
   return (
@@ -431,6 +431,8 @@ export function AdminCategoryLevel2Page() {
                 <select
                   value={parentCategoryFilter}
                   onChange={(event) => setParentCategoryFilter(Number(event.target.value))}
+                  aria-label="Lọc danh mục cấp 1"
+                  title="Lọc danh mục cấp 1"
                   className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
                 >
                   <option value={0}>Tất cả danh mục cấp 1</option>

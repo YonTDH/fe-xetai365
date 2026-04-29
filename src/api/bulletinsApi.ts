@@ -63,7 +63,10 @@ function resolveImageUrl(item: {
   );
 }
 
-async function listBulletinsByType(type: 'promotion' | 'news_event' | 'recruitment', limit = 12): Promise<BulletinItem[]> {
+async function listBulletinsByType(
+  type: 'promotion' | 'news_event' | 'recruitment' | 'services',
+  limit = 12
+): Promise<BulletinItem[]> {
   const response = await fetch(buildApiUrl(`/api/content/bulletins?type=${type}&limit=${limit}`));
   const data = (await response.json().catch(() => ({}))) as ListBulletinsResponse;
 
@@ -92,6 +95,10 @@ export function listNewsEvents(limit = 12): Promise<BulletinItem[]> {
 
 export function listRecruitments(limit = 12): Promise<BulletinItem[]> {
   return listBulletinsByType('recruitment', limit);
+}
+
+export function listServices(limit = 12): Promise<BulletinItem[]> {
+  return listBulletinsByType('services', limit);
 }
 
 export async function getBulletinDetail(idOrSlug: string): Promise<BulletinItem> {

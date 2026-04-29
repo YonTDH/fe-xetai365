@@ -1,5 +1,5 @@
 import type { NavItem } from './types';
-import { Home, Info, Truck, FileText, Gift, Phone, BriefcaseBusiness } from 'lucide-react';
+import { Home, Info, Truck, FileText, Gift, Phone, BriefcaseBusiness, Wrench } from 'lucide-react';
 
 export const mainNavItems: NavItem[] = [
   {
@@ -32,6 +32,12 @@ export const mainNavItems: NavItem[] = [
     path: '/khuyen-mai',
     icon: <Gift size={18} />,
     badge: 'M\u1EDBi',
+  },
+  {
+    key: 'dich-vu',
+    label: 'D\u1ECAH V\u1EE4',
+    path: '/dich-vu',
+    icon: <Wrench size={18} />,
   },
   {
     key: 'tuyen-dung',

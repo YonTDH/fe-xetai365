@@ -6,6 +6,7 @@ import { ContactPage } from '@/pages/ContactPage';
 import { PromotionPage } from '@/pages/PromotionPage';
 import { RecruitmentPage } from '@/pages/RecruitmentPage';
 import { NewsPage } from '@/pages/NewsPage';
+import { ServicesPage } from '@/pages/ServicesPage';
 import { BulletinDetailPage } from '@/pages/BulletinDetailPage';
 import { NewsDetailPage } from '@/pages/NewsDetailPage';
 import { ProductCategoryPage } from '@/pages/ProductCategoryPage';
@@ -31,6 +32,11 @@ export default function AppRoutes() {
         <Route
           path="/khuyen-mai/:idOrSlug"
           element={<BulletinDetailPage sectionLabel="Khuy\u1EBFn m\u00E3i" />}
+        />
+        <Route path="/dich-vu" element={<ServicesPage />} />
+        <Route
+          path="/dich-vu/:idOrSlug"
+          element={<BulletinDetailPage sectionLabel="Dịch vụ" />}
         />
         <Route path="/tuyen-dung" element={<RecruitmentPage />} />
         <Route

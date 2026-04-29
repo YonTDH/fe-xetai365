@@ -92,6 +92,10 @@ export function AdminDashboardPage() {
     return <Navigate to={getAdminSectionPath(DEFAULT_ADMIN_SECTION)} replace />;
   }
 
+  if (activeSection === 'company-intro') {
+    return <Navigate to={getAdminSectionPath('showroom')} replace />;
+  }
+
   return (
     <section className="min-h-screen bg-slate-50 [font-family:Tahoma,'Segoe_UI',sans-serif]">
       <AdminSidebar

@@ -22,7 +22,7 @@ export function CategoriesSection({ categories, hotline }: CategoriesSectionProp
   const [products, setProducts] = useState<LandingProduct[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const safeHotline = hotline || '0899.966.254';
+  const safeHotline = hotline || 'Đang cập nhật';
 
   useEffect(() => {
     if (rootCategories.length === 0) {

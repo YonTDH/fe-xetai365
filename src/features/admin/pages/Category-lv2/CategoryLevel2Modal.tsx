@@ -64,11 +64,6 @@ export function CategoryLevel2Modal({
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!open) return;
-    setForm(createFormState(item));
-  }, [item, open]);
-
-  useEffect(() => {
     if (!open || isSaving) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {

@@ -9,7 +9,7 @@ export type AdminUser = {
   status: string;
 };
 
-export type AdminBulletinType = 'news_event' | 'promotion' | 'recruitment';
+export type AdminBulletinType = 'news_event' | 'promotion' | 'recruitment' | 'services';
 export type AdminBulletinStatus = 'draft' | 'published' | 'archived';
 
 export type AdminBulletin = {
@@ -149,7 +149,7 @@ export type AdminSiteSetting = {
   toado: string;
   facebook: string;
   youtube: string;
-  yahoo: string;
+  zalo: string;
   skype: string;
   twitter: string;
   zing: string;
@@ -165,7 +165,7 @@ export type AdminSiteSetting = {
 
 export type AdminSiteSettingPayload = Omit<AdminSiteSetting, 'id' | 'updatedAt'>;
 
-type AdminUploadFolder = 'products' | 'news' | 'promotions' | 'recruitment' | 'pages';
+type AdminUploadFolder = 'products' | 'news' | 'promotions' | 'recruitment' | 'services' | 'pages';
 
 type AdminUploadSignature = {
   cloudName: string;
@@ -310,7 +310,7 @@ function mapAdminSiteSetting(item: Record<string, unknown> | null | undefined): 
     toado: toSafeString(source.toado),
     facebook: toSafeString(source.facebook),
     youtube: toSafeString(source.youtube),
-    yahoo: toSafeString(source.yahoo),
+    zalo: toSafeString(source.zalo),
     skype: toSafeString(source.skype),
     twitter: toSafeString(source.twitter),
     zing: toSafeString(source.zing),

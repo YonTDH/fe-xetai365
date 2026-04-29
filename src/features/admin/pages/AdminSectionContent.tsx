@@ -7,6 +7,8 @@ import { AdminNewsPage } from './AdminNewsPage';
 import { AdminPromotionPage } from './AdminPromotionPage';
 import { AdminProductsPage } from './Products/AdminProductsPage';
 import { AdminRecruitmentPage } from './AdminRecruitmentPage';
+import { AdminServicesPage } from './AdminServicesPage';
+import { AdminShowroomPage } from './Showroom/AdminShowroomPage';
 
 export function AdminSectionContent({ section }: { section: AdminSectionKey }) {
   switch (section) {
@@ -18,12 +20,16 @@ export function AdminSectionContent({ section }: { section: AdminSectionKey }) {
       return <AdminProductsPage />;
     case 'about-us':
       return <AdminAboutUsPage />;
+    case 'showroom':
+      return <AdminShowroomPage />;
     case 'news':
       return <AdminNewsPage />;
     case 'recruitment':
       return <AdminRecruitmentPage />;
     case 'promotion':
       return <AdminPromotionPage />;
+    case 'services':
+      return <AdminServicesPage />;
     default:
       return <AdminPlaceholderPanel section={section} />;
   }

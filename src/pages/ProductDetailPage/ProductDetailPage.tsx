@@ -4,7 +4,8 @@ import topProductImg from '@/assets/lading-page/top-product.png';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { getProductDetail, type ProductDetail, type ProductImage } from '@/api/landingApi';
+import { getProductDetail, getPublicSiteSetting, type ProductDetail, type ProductImage, type PublicSiteSetting } from '@/api/landingApi';
+import { formatPhoneDisplay } from '@/lib/formatPhone';
 import { sanitizeHtml } from '@/lib/sanitizeHtml';
 
 function normalizeIdOrSlug(value: string) {
@@ -31,6 +32,7 @@ function getStatusLabel(status: string) {
 export function ProductDetailPage() {
   const { idOrSlug = '' } = useParams();
   const [product, setProduct] = useState<ProductDetail | null>(null);
+  const [siteSetting, setSiteSetting] = useState<PublicSiteSetting | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeImage, setActiveImage] = useState('');
@@ -44,6 +46,8 @@ export function ProductDetailPage() {
   const displayImage = activeImage || galleryImages[0] || topProductImg;
   const sanitizedContent = useMemo(() => sanitizeHtml(product?.content || ''), [product?.content]);
   const contentHasHtml = useMemo(() => hasHtmlContent(product?.content || ''), [product?.content]);
+  const contactPhone = useMemo(() => siteSetting?.hotline || siteSetting?.dienthoai || '', [siteSetting]);
+  const contactHref = useMemo(() => (contactPhone ? `tel:${contactPhone.replace(/[^\d+]/g, '')}` : ''), [contactPhone]);
 
   const specs = useMemo(() => {
     if (!product) return [];
@@ -87,6 +91,29 @@ export function ProductDetailPage() {
   useEffect(() => {
     void loadDetail();
   }, [loadDetail]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadSiteSetting = async () => {
+      try {
+        const data = await getPublicSiteSetting();
+        if (mounted) {
+          setSiteSetting(data);
+        }
+      } catch {
+        if (mounted) {
+          setSiteSetting(null);
+        }
+      }
+    };
+
+    void loadSiteSetting();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <section className="bg-slate-50 py-8 md:py-12">
@@ -153,9 +180,11 @@ export function ProductDetailPage() {
                 <Button asChild size="lg" className="bg-[#FFD600] text-black hover:bg-[#e6c200]">
                   <Link to="/lien-he">Liên hệ tư vấn</Link>
                 </Button>
-                <Button asChild variant="outline" size="lg">
-                  <a href="tel:0899966254">Gọi 0899.966.254</a>
-                </Button>
+                {contactHref ? (
+                  <Button asChild variant="outline" size="lg">
+                    <a href={contactHref}>Gọi {formatPhoneDisplay(contactPhone)}</a>
+                  </Button>
+                ) : null}
               </div>
             </article>
 

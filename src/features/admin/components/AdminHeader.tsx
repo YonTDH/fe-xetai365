@@ -25,7 +25,7 @@ function formatVNDate(date: Date) {
   return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
 }
 
-export function AdminHeader({ title, description, user: _user, onLogout }: AdminHeaderProps) {
+export function AdminHeader({ title, description, onLogout }: AdminHeaderProps) {
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {

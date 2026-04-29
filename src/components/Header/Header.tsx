@@ -1,25 +1,43 @@
-import logoImg from "@/assets/logo-namviet-binh-phuov.png"
+import logoImg from '@/assets/logo-namviet-binh-phuov.png';
+import type { PublicSiteSetting } from '@/api/landingApi';
+import { formatPhoneDisplay } from '@/lib/formatPhone';
 
-export function Header() {
+type HeaderProps = {
+  setting?: PublicSiteSetting | null;
+};
+
+function formatPhoneLabel(value: string) {
+  return formatPhoneDisplay(value) || 'Đang cập nhật';
+}
+
+export function Header({ setting }: HeaderProps) {
+  const phone = setting?.hotline || setting?.dienthoai || '';
+  const contactLabel = formatPhoneLabel(phone);
+  const contactHref = phone ? `tel:${phone.replace(/[^\d+]/g, '')}` : undefined;
+  const brandLabel = setting?.title?.trim() || 'ĐỨC XE TẢI';
+
   return (
-    <div className="container mx-auto px-4 h-20 flex items-center justify-between text-slate-100">
-      {/* Left */}
-      <div className="flex items-center shrink-0">
+    <div className="container mx-auto flex h-20 items-center justify-between px-4 text-slate-100">
+      <div className="flex shrink-0 items-center">
         <img src={logoImg} alt="Nam Việt Logo" className="h-16 w-auto object-contain" />
       </div>
 
-      {/* Middle */}
-      <div className="hidden md:block flex-1 text-center px-4">
-        <h1 className="text-base md:text-lg lg:text-2xl font-black tracking-wide text-white">
+      <div className="hidden flex-1 px-4 text-center md:block">
+        <h1 className="text-base font-black tracking-wide text-white md:text-lg lg:text-2xl">
           HINO - ISUZU - HUYNDAI - TERACO - JAC
         </h1>
       </div>
 
-      {/* Right */}
-      <div className="flex flex-col items-end shrink-0">
-        <span className="font-bold text-base md:text-lg text-slate-100">Liên hệ: 0899.966.254</span>
-        <span className="font-semibold text-sm text-primary-400">ĐỨC XE TẢI</span>
+      <div className="flex shrink-0 flex-col items-end">
+        {contactHref ? (
+          <a href={contactHref} className="text-base font-bold text-slate-100 md:text-lg">
+            Liên hệ: {contactLabel}
+          </a>
+        ) : (
+          <span className="text-base font-bold text-slate-100 md:text-lg">Liên hệ: {contactLabel}</span>
+        )}
+        <span className="text-sm font-semibold text-primary-400">{brandLabel}</span>
       </div>
     </div>
-  )
+  );
 }

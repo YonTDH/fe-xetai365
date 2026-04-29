@@ -225,7 +225,13 @@ export function AdminBulletinModal({
     }
 
     const folder =
-      type === 'recruitment' ? 'recruitment' : type === 'news_event' ? 'news' : 'promotions';
+      type === 'recruitment'
+        ? 'recruitment'
+        : type === 'news_event'
+          ? 'news'
+          : type === 'services'
+            ? 'services'
+            : 'promotions';
 
     setIsUploadingImage(true);
     setUploadError('');

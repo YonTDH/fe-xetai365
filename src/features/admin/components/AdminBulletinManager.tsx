@@ -176,7 +176,7 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
   );
   const allSelected = filteredRows.length > 0 && selectedFilteredIds.length === filteredRows.length;
 
-  const toggleSelectAll = () => {
+  const toggleSelectAll = useCallback(() => {
     setSelectedIds((prev) => {
       if (allSelected) {
         return prev.filter((id) => !filteredRowIds.includes(id));
@@ -184,7 +184,7 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
 
       return Array.from(new Set([...prev, ...filteredRowIds]));
     });
-  };
+  }, [allSelected, filteredRowIds]);
 
   const toggleSelectOne = (id: number) => {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
@@ -199,7 +199,7 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
     setModalState({ mode: 'create', item: null });
   };
 
-  const openModal = async (mode: 'view' | 'edit', id: number) => {
+  const openModal = useCallback(async (mode: 'view' | 'edit', id: number) => {
     try {
       setIsLoading(true);
       setError('');
@@ -212,7 +212,7 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [showToast]);
 
   const closeModal = () => {
     if (isSaving) return;
@@ -462,7 +462,7 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
         ),
       },
     ],
-    [allSelected, heading, isSaving, selectedIds]
+    [allSelected, heading, isSaving, openModal, selectedIds, toggleSelectAll]
   );
 
   return (
@@ -489,6 +489,8 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
                 <select
                   value={statusFilter}
                   onChange={(event) => setStatusFilter(event.target.value as 'all' | AdminBulletinStatus)}
+                  aria-label="Lọc trạng thái bài viết"
+                  title="Lọc trạng thái bài viết"
                   className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
                 >
                   <option value="all">Tất cả trạng thái bài viết</option>

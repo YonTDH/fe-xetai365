@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { createContactRequest } from '@/api/contactRequestsApi';
+import { getPublicSiteSetting, type PublicSiteSetting } from '@/api/landingApi';
 import { listVehicleOptions, type VehicleOption } from '@/api/vehiclesApi';
 
 type ContactForm = {
@@ -30,17 +31,20 @@ export function ContactPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
+  const [siteSetting, setSiteSetting] = useState<PublicSiteSetting | null>(null);
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(false);
 
-  const contactSummary = useMemo(
-    () => [
-      'Hotline bán hàng: 0899.966.254',
-      'Đường dây nóng khiếu nại: 0986.424.879',
-      'Email: tanthong342@gmail.com',
-      'Địa chỉ: 16/1B Đường Dẫn Cầu Phú Long, Phường Lái Thiêu, TP. Hồ Chí Minh',
-    ],
-    []
-  );
+  const contactSummary = useMemo(() => {
+    const lines: string[] = [];
+
+    if (siteSetting?.hotline) lines.push(`Hotline bán hàng: ${siteSetting.hotline}`);
+    if (siteSetting?.hotline1) lines.push(`Đường dây nóng: ${siteSetting.hotline1}`);
+    if (siteSetting?.hotline2) lines.push(`Hỗ trợ thêm: ${siteSetting.hotline2}`);
+    if (siteSetting?.email) lines.push(`Email: ${siteSetting.email}`);
+    if (siteSetting?.diachi) lines.push(`Địa chỉ: ${siteSetting.diachi}`);
+
+    return lines.length ? lines : ['Thông tin liên hệ đang cập nhật.'];
+  }, [siteSetting]);
 
   const setField = (field: keyof ContactForm, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -70,7 +74,21 @@ export function ContactPage() {
       }
     };
 
-    loadVehicles();
+    const loadSiteSetting = async () => {
+      try {
+        const data = await getPublicSiteSetting();
+        if (mounted) {
+          setSiteSetting(data);
+        }
+      } catch {
+        if (mounted) {
+          setSiteSetting(null);
+        }
+      }
+    };
+
+    void loadVehicles();
+    void loadSiteSetting();
 
     return () => {
       mounted = false;
@@ -146,7 +164,7 @@ export function ContactPage() {
                       value={form.fullName}
                       onChange={(e) => setField('fullName', e.target.value)}
                       placeholder="Nhập họ và tên"
-                      aria-invalid={Boolean(errors.fullName)}
+                      aria-invalid={errors.fullName ? 'true' : 'false'}
                     />
                     {errors.fullName && <p className="text-xs text-red-600">{errors.fullName}</p>}
                   </div>
@@ -160,7 +178,7 @@ export function ContactPage() {
                       value={form.phone}
                       onChange={(e) => setField('phone', e.target.value)}
                       placeholder="Nhập số điện thoại"
-                      aria-invalid={Boolean(errors.phone)}
+                      aria-invalid={errors.phone ? 'true' : 'false'}
                     />
                     {errors.phone && <p className="text-xs text-red-600">{errors.phone}</p>}
                   </div>
@@ -177,7 +195,7 @@ export function ContactPage() {
                       value={form.email}
                       onChange={(e) => setField('email', e.target.value)}
                       placeholder="example@email.com"
-                      aria-invalid={Boolean(errors.email)}
+                      aria-invalid={errors.email ? 'true' : 'false'}
                     />
                     {errors.email && <p className="text-xs text-red-600">{errors.email}</p>}
                   </div>
@@ -190,8 +208,10 @@ export function ContactPage() {
                       id="vehicleId"
                       value={form.vehicleId}
                       onChange={(e) => setField('vehicleId', e.target.value)}
+                      aria-label="Chọn xe cần tư vấn"
+                      title="Chọn xe cần tư vấn"
                       className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm text-slate-800 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                      aria-invalid={Boolean(errors.vehicleId)}
+                      aria-invalid={errors.vehicleId ? 'true' : 'false'}
                       disabled={isLoadingVehicles}
                     >
                       <option value="">{isLoadingVehicles ? 'Đang tải danh sách xe...' : 'Chọn xe'}</option>
@@ -217,7 +237,7 @@ export function ContactPage() {
                     placeholder="Nhập nội dung cần tư vấn..."
                     rows={5}
                     className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm text-slate-800 outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                    aria-invalid={Boolean(errors.message)}
+                    aria-invalid={errors.message ? 'true' : 'false'}
                   />
                   {errors.message && <p className="text-xs text-red-600">{errors.message}</p>}
                 </div>

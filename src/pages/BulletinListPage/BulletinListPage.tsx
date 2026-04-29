@@ -30,7 +30,7 @@ function flattenCategories(nodes: CategoryNode[], parentSlug?: string): Array<{ 
 
 type BulletinListPageProps = {
   title: string;
-  activeTab: 'news' | 'promotion' | 'recruitment';
+  activeTab: 'news' | 'promotion' | 'recruitment' | 'services';
   detailBasePath: string;
   loadItems: (limit?: number) => Promise<BulletinItem[]>;
   loadingText: string;
@@ -56,6 +56,7 @@ export function BulletinListPage({
     () => [
       { key: 'news', label: 'Tin tức - sự kiện', path: '/tin-tuc' },
       { key: 'promotion', label: 'Khuyến mãi', path: '/khuyen-mai' },
+      { key: 'services', label: 'Dịch vụ', path: '/dich-vu' },
       { key: 'recruitment', label: 'Tuyển dụng', path: '/tuyen-dung' },
     ],
     [],

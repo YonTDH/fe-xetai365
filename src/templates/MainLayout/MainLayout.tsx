@@ -4,11 +4,26 @@ import { Menu, MessageCircleMore, X } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { NavMenu } from '@/components/NavMenu';
 import { Footer } from '@/components/Footer';
+import { getPublicSiteSetting, type PublicSiteSetting } from '@/api/landingApi';
+
+function normalizePhoneForZalo(value: string) {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (!digits) {
+    return '';
+  }
+
+  if (digits.startsWith('0')) {
+    return `84${digits.slice(1)}`;
+  }
+
+  return digits;
+}
 
 export function MainLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const zaloPhone = '0899966254';
-  const zaloHref = `https://zalo.me/${zaloPhone}`;
+  const [siteSetting, setSiteSetting] = useState<PublicSiteSetting | null>(null);
+  const zaloPhone = normalizePhoneForZalo(siteSetting?.hotline || siteSetting?.dienthoai || '');
+  const zaloHref = siteSetting?.zalo?.trim() || (zaloPhone ? `https://zalo.me/${zaloPhone}` : '');
 
   useEffect(() => {
     if (drawerOpen) {
@@ -29,10 +44,33 @@ export function MainLayout() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+
+    const loadSiteSetting = async () => {
+      try {
+        const data = await getPublicSiteSetting();
+        if (mounted) {
+          setSiteSetting(data);
+        }
+      } catch {
+        if (mounted) {
+          setSiteSetting(null);
+        }
+      }
+    };
+
+    void loadSiteSetting();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   return (
     <div className="relative min-h-screen bg-white font-sans antialiased selection:bg-primary/20 selection:text-primary dark:bg-zinc-950">
       <div className="relative z-40 bg-navy-950">
-        <Header />
+        <Header setting={siteSetting} />
       </div>
 
       <div className="sticky top-0 z-50 border-b border-slate-300 bg-white/95 backdrop-blur-sm transition-all">
@@ -50,7 +88,7 @@ export function MainLayout() {
             <button
               id="hamburger-menu-btn"
               aria-label="Mở menu"
-              aria-expanded={drawerOpen}
+              aria-expanded={drawerOpen ? 'true' : 'false'}
               onClick={() => setDrawerOpen(true)}
               className="rounded-md p-2 text-slate-700 transition-colors hover:bg-slate-100 active:bg-slate-300"
             >
@@ -65,7 +103,7 @@ export function MainLayout() {
           'fixed inset-0 z-[60] transition-opacity duration-300 lg:hidden',
           drawerOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
         ].join(' ')}
-        aria-hidden={!drawerOpen}
+        aria-hidden={drawerOpen ? 'false' : 'true'}
       >
         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setDrawerOpen(false)} />
 
@@ -97,17 +135,19 @@ export function MainLayout() {
         <Outlet />
       </main>
 
-      <a
-        href={zaloHref}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Chat Zalo"
-        className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#0068ff] text-white shadow-[0_14px_30px_rgba(0,104,255,0.35)] transition-transform hover:scale-105"
-      >
-        <MessageCircleMore className="h-7 w-7" />
-      </a>
+      {zaloHref ? (
+        <a
+          href={zaloHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Chat Zalo"
+          className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#0068ff] text-white shadow-[0_14px_30px_rgba(0,104,255,0.35)] transition-transform hover:scale-105"
+        >
+          <MessageCircleMore className="h-7 w-7" />
+        </a>
+      ) : null}
 
-      <Footer />
+      <Footer setting={siteSetting} />
     </div>
   );
 }

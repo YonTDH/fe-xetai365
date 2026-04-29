@@ -143,7 +143,7 @@ export function AdminProductsPage() {
   );
   const allSelected = filteredRows.length > 0 && selectedFilteredIds.length === filteredRows.length;
 
-  const toggleSelectAll = () => {
+  const toggleSelectAll = useCallback(() => {
     setSelectedIds((prev) => {
       if (allSelected) {
         return prev.filter((id) => !filteredRowIds.includes(id));
@@ -151,17 +151,17 @@ export function AdminProductsPage() {
 
       return Array.from(new Set([...prev, ...filteredRowIds]));
     });
-  };
+  }, [allSelected, filteredRowIds]);
 
   const toggleSelectOne = (id: number) => {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
   };
 
-  const openModal = (mode: 'view' | 'edit', id: number) => {
+  const openModal = useCallback((mode: 'view' | 'edit', id: number) => {
     const item = items.find((entry) => entry.id === id);
     if (!item) return;
     setModalState({ mode, item });
-  };
+  }, [items]);
 
   const openCreateModal = () => {
     setModalState({ mode: 'create', item: null });
@@ -386,7 +386,7 @@ export function AdminProductsPage() {
         ),
       },
     ],
-    [allSelected, isDeletingId, selectedIds]
+    [allSelected, isDeletingId, openModal, selectedIds, toggleSelectAll]
   );
 
   return (
@@ -413,6 +413,8 @@ export function AdminProductsPage() {
                 <select
                   value={categoryFilter}
                   onChange={(event) => setCategoryFilter(Number(event.target.value))}
+                  aria-label="Lọc danh mục cấp 2"
+                  title="Lọc danh mục cấp 2"
                   className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
                 >
                   <option value={0}>Tất cả danh mục cấp 2</option>

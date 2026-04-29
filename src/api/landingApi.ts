@@ -56,6 +56,21 @@ export type LandingHomeData = {
   latestNews: LandingNewsItem[];
 };
 
+export type PublicSiteSetting = {
+  title: string;
+  email: string;
+  website: string;
+  dienthoai: string;
+  diachi: string;
+  hotline: string;
+  hotline1: string;
+  hotline2: string;
+  facebook: string;
+  youtube: string;
+  zalo: string;
+  skype: string;
+};
+
 export type CategoryNode = {
   id: number;
   slug: string;
@@ -101,6 +116,25 @@ function toSafeBoolean(value: unknown, fallback = false) {
   }
 
   return fallback;
+}
+
+function mapPublicSiteSetting(item: Record<string, unknown> | null | undefined): PublicSiteSetting {
+  const source = item || {};
+
+  return {
+    title: toSafeString(source.title),
+    email: toSafeString(source.email),
+    website: toSafeString(source.website),
+    dienthoai: toSafeString(source.dienthoai),
+    diachi: toSafeString(source.diachi),
+    hotline: toSafeString(source.hotline),
+    hotline1: toSafeString(source.hotline1),
+    hotline2: toSafeString(source.hotline2),
+    facebook: toSafeString(source.facebook),
+    youtube: toSafeString(source.youtube),
+    zalo: toSafeString(source.zalo),
+    skype: toSafeString(source.skype),
+  };
 }
 
 function mapProduct(item: Record<string, unknown>): LandingProduct {
@@ -201,6 +235,21 @@ export async function getLandingHomeData(): Promise<LandingHomeData> {
     featuredProducts: (data.data.featuredProducts || []).map(mapProduct),
     latestNews: (data.data.latestNews || []).map(mapNews),
   };
+}
+
+export async function getPublicSiteSetting(): Promise<PublicSiteSetting> {
+  const response = await fetch(buildApiUrl('/api/settings'));
+  const data = (await response.json().catch(() => ({}))) as {
+    success?: boolean;
+    data?: Record<string, unknown> | null;
+    message?: string;
+  };
+
+  if (!response.ok || data.success === false) {
+    throw new Error(data.message || 'Khong the tai cai dat website.');
+  }
+
+  return mapPublicSiteSetting(data.data);
 }
 
 export async function listCatalogCategoriesTree(): Promise<CategoryNode[]> {

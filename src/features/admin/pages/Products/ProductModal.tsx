@@ -328,6 +328,8 @@ export function ProductModal({
                   value={form.categoryLevel2Id}
                   onChange={(event) => handleChange('categoryLevel2Id', Number(event.target.value))}
                   disabled={isReadOnly || isSaving}
+                  aria-label="Danh mục cấp 2"
+                  title="Danh mục cấp 2"
                   className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
                 >
                   {categoryLevel2Options.map((option) => (
@@ -480,6 +482,8 @@ export function ProductModal({
                     value={form.shortDescription}
                     onChange={(event) => handleChange('shortDescription', event.target.value)}
                     readOnly={isReadOnly || isSaving}
+                    aria-label="Mô tả ngắn"
+                    title="Mô tả ngắn"
                     className="min-h-28 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
                   />
                 </Field>
@@ -488,6 +492,8 @@ export function ProductModal({
                     value={form.content}
                     onChange={(event) => handleChange('content', event.target.value)}
                     readOnly={isReadOnly || isSaving}
+                    aria-label="Nội dung sản phẩm"
+                    title="Nội dung sản phẩm"
                     className="min-h-[360px] w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
                   />
                 </Field>
@@ -517,6 +523,8 @@ export function ProductModal({
                     value={form.metaDescription}
                     onChange={(event) => handleChange('metaDescription', event.target.value)}
                     readOnly={isReadOnly || isSaving}
+                    aria-label="Meta description"
+                    title="Meta description"
                     className="min-h-32 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
                   />
                 </Field>
