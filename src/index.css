@@ -136,3 +136,18 @@
     @apply font-sans;
   }
 }
+
+@layer components {
+  .rich-content figure {
+    @apply mx-auto my-6 table max-w-full;
+  }
+
+  .rich-content figcaption {
+    @apply mt-2 text-center text-sm italic text-slate-500;
+  }
+
+  .rich-content p:has(> em:only-child),
+  .rich-content p:has(> i:only-child) {
+    @apply mx-auto w-full text-center text-sm italic text-slate-500;
+  }
+}

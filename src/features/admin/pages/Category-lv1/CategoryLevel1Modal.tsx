@@ -28,6 +28,16 @@ function createFormState(item: AdminVehicleCategory | null): FormState {
   };
 }
 
+function slugifyVietnamese(value: string) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-');
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block space-y-2">
@@ -50,36 +60,38 @@ export function CategoryLevel1Modal({
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
-
+    if (!open) return;
     setForm(createFormState(item));
   }, [item, open]);
 
   useEffect(() => {
-    if (!open || isSaving) {
-      return;
-    }
+    if (!open || isSaving) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
+      if (event.key === 'Escape') onClose();
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSaving, onClose, open]);
 
-  if (!open || !item) {
-    return null;
-  }
+  if (!open || !item) return null;
 
   const isReadOnly = mode === 'view';
 
   const handleChange = <TKey extends keyof FormState>(key: TKey, value: FormState[TKey]) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => {
+      if (key === 'name') {
+        const nextName = String(value);
+        return {
+          ...prev,
+          name: nextName,
+          slug: slugifyVietnamese(nextName),
+        };
+      }
+
+      return { ...prev, [key]: value };
+    });
   };
 
   const handleSubmit = () => {
@@ -102,13 +114,8 @@ export function CategoryLevel1Modal({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm"
       onMouseDown={(event) => {
-        if (isSaving) {
-          return;
-        }
-
-        if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
-          onClose();
-        }
+        if (isSaving) return;
+        if (panelRef.current && !panelRef.current.contains(event.target as Node)) onClose();
       }}
     >
       <div
@@ -136,7 +143,7 @@ export function CategoryLevel1Modal({
           </Field>
 
           <Field label="Slug">
-            <Input value={form.slug} onChange={(event) => handleChange('slug', event.target.value)} readOnly={isReadOnly || isSaving} />
+            <Input value={form.slug} readOnly />
           </Field>
 
           <Field label="Hiển thị">

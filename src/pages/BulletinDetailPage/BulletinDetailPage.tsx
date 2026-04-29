@@ -102,7 +102,7 @@ export function BulletinDetailPage({ sectionLabel }: BulletinDetailPageProps) {
             {item.content ? (
               contentHasHtml ? (
                 <div
-                  className="prose prose-slate mt-5 max-w-none text-sm leading-relaxed md:text-base [&_img]:mx-auto [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-md"
+                    className="rich-content prose prose-slate mt-5 max-w-none text-sm leading-relaxed md:text-base [&_img]:mx-auto [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-md"
                   dangerouslySetInnerHTML={{ __html: sanitizedContent }}
                 />
               ) : (

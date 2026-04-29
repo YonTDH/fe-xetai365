@@ -145,6 +145,7 @@ export function ProductModal({
   const [docxImportSuccess, setDocxImportSuccess] = useState('');
   const [docxImportWarnings, setDocxImportWarnings] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<ProductTab>('info');
+  const [selectedImagePreviewUrl, setSelectedImagePreviewUrl] = useState('');
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -152,6 +153,7 @@ export function ProductModal({
     setForm(createFormState(item, categoryLevel2Options[0]?.id || 0));
     setSelectedImageFile(null);
     setSelectedDocxFile(null);
+    setSelectedImagePreviewUrl('');
     setIsUploadingImage(false);
     setIsImportingDocx(false);
     setUploadError('');
@@ -160,6 +162,18 @@ export function ProductModal({
     setDocxImportWarnings([]);
     setActiveTab('info');
   }, [item, open, categoryLevel2Options]);
+
+  useEffect(() => {
+    if (!selectedImageFile) {
+      setSelectedImagePreviewUrl('');
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(selectedImageFile);
+    setSelectedImagePreviewUrl(objectUrl);
+
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [selectedImageFile]);
 
   useEffect(() => {
     if (!open || isSaving) return;
@@ -174,35 +188,55 @@ export function ProductModal({
 
   const isReadOnly = mode === 'view';
   const previewHtml = hasHtml(form.content);
+  const previewImageUrl = selectedImagePreviewUrl || form.imageUrl;
 
   const handleChange = <TKey extends keyof FormState>(key: TKey, value: FormState[TKey]) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => {
+      if (key === 'title') {
+        const nextTitle = String(value);
+        return {
+          ...prev,
+          title: nextTitle,
+          slug: mode === 'create' ? slugifyVietnamese(nextTitle) : prev.slug,
+        };
+      }
+
+      return { ...prev, [key]: value };
+    });
   };
 
-  const handleSubmit = () => {
+  const uploadPendingImage = async () => {
+    if (!selectedImageFile) {
+      return form.imageUrl;
+    }
+
+    setIsUploadingImage(true);
+    setUploadError('');
+
+    try {
+      const uploaded = await uploadAdminImage(selectedImageFile, 'products');
+      return uploaded.imageUrl;
+    } catch (err) {
+      throw new Error(err instanceof Error ? err.message : 'Không thể upload ảnh.');
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const handleSubmit = async () => {
     if (isReadOnly) {
       onClose();
       return;
     }
-    onSave(form);
-  };
-
-  const handleUploadImage = async () => {
-    if (!selectedImageFile) {
-      setUploadError('Vui lòng chọn ảnh trước khi upload.');
-      return;
-    }
 
     try {
-      setIsUploadingImage(true);
-      setUploadError('');
-      const uploaded = await uploadAdminImage(selectedImageFile, 'products');
-      handleChange('imageUrl', uploaded.imageUrl);
-      setSelectedImageFile(null);
+      const imageUrl = await uploadPendingImage();
+      onSave({
+        ...form,
+        imageUrl,
+      });
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : 'Không thể upload ảnh.');
-    } finally {
-      setIsUploadingImage(false);
     }
   };
 
@@ -220,7 +254,7 @@ export function ProductModal({
         return {
           ...prev,
           title: nextTitle,
-          slug: prev.slug || slugifyVietnamese(nextTitle),
+          slug: mode === 'create' ? slugifyVietnamese(nextTitle) : prev.slug,
           shortDescription: nextShortDescription,
           content: imported.content || prev.content,
           imageUrl: prev.imageUrl || imported.imageUrl,
@@ -287,7 +321,7 @@ export function ProductModal({
                 <Input value={form.title} onChange={(event) => handleChange('title', event.target.value)} readOnly={isReadOnly || isSaving} />
               </Field>
               <Field label="Slug">
-                <Input value={form.slug} onChange={(event) => handleChange('slug', event.target.value)} readOnly={isReadOnly || isSaving} />
+                <Input value={form.slug} readOnly />
               </Field>
               <Field label="Danh mục cấp 2">
                 <select
@@ -322,13 +356,12 @@ export function ProductModal({
               <Field label="Vị trí">
                 <Input value={form.location} onChange={(event) => handleChange('location', event.target.value)} readOnly={isReadOnly || isSaving} />
               </Field>
-              <div className="md:col-span-2">
+              <div className="md:col-span-2 grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
                 <Field label="Ảnh đại diện">
-                  <div className="space-y-3">
-                    <Input value={form.imageUrl} onChange={(event) => handleChange('imageUrl', event.target.value)} readOnly={isReadOnly || isSaving} />
+                  <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     {!isReadOnly ? (
-                      <div className="flex flex-wrap items-center gap-3">
-                        <label className="inline-flex cursor-pointer items-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
+                      <div className="flex flex-wrap items-center gap-4">
+                        <label className="inline-flex cursor-pointer items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
                           <input
                             type="file"
                             accept="image/*"
@@ -341,53 +374,55 @@ export function ProductModal({
                           />
                           Chọn ảnh
                         </label>
-                        <Button type="button" variant="outline" onClick={() => void handleUploadImage()} disabled={isSaving || isUploadingImage}>
-                          {isUploadingImage ? 'Đang upload...' : 'Upload ảnh'}
-                        </Button>
+                        <div className="text-xs text-slate-500">Ảnh sẽ tự upload khi nhấn lưu.</div>
                       </div>
                     ) : null}
-                    <div className="text-xs text-slate-500">{selectedImageFile ? selectedImageFile.name : 'Chưa chọn tệp ảnh.'}</div>
+                    <div className="text-xs text-slate-500">
+                      {selectedImageFile ? selectedImageFile.name : previewImageUrl ? 'Đang dùng ảnh hiện tại.' : 'Chưa chọn tệp ảnh.'}
+                    </div>
                     {uploadError ? <div className="text-xs text-red-600">{uploadError}</div> : null}
-                    {form.imageUrl ? (
-                      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-2">
-                        <img src={form.imageUrl} alt={form.title || 'Ảnh sản phẩm'} className="h-48 w-full rounded-xl object-cover" />
+                    {previewImageUrl ? (
+                      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-3">
+                        <img src={previewImageUrl} alt={form.title || 'Ảnh sản phẩm'} className="h-24 w-24 rounded-xl object-cover" />
                       </div>
                     ) : null}
                   </div>
                 </Field>
+                <div className="space-y-4">
+                  <Field label="Thứ tự">
+                    <Input
+                      type="number"
+                      value={String(form.sortOrder)}
+                      onChange={(event) => handleChange('sortOrder', Number(event.target.value) || 1)}
+                      readOnly={isReadOnly || isSaving}
+                    />
+                  </Field>
+                  <Field label="Hiển thị">
+                    <label className="flex h-10 items-center gap-3 rounded-xl border border-slate-200 px-3">
+                      <input
+                        type="checkbox"
+                        checked={form.isVisible}
+                        onChange={(event) => handleChange('isVisible', event.target.checked)}
+                        disabled={isReadOnly || isSaving}
+                        className="h-4 w-4 rounded border-slate-300"
+                      />
+                      <span className="text-sm text-slate-700">{form.isVisible ? 'Đang hiển thị' : 'Đang ẩn'}</span>
+                    </label>
+                  </Field>
+                  <Field label="Nổi bật">
+                    <label className="flex h-10 items-center gap-3 rounded-xl border border-slate-200 px-3">
+                      <input
+                        type="checkbox"
+                        checked={form.isFeatured}
+                        onChange={(event) => handleChange('isFeatured', event.target.checked)}
+                        disabled={isReadOnly || isSaving}
+                        className="h-4 w-4 rounded border-slate-300"
+                      />
+                      <span className="text-sm text-slate-700">{form.isFeatured ? 'Sản phẩm nổi bật' : 'Không nổi bật'}</span>
+                    </label>
+                  </Field>
+                </div>
               </div>
-              <Field label="Thứ tự">
-                <Input
-                  type="number"
-                  value={String(form.sortOrder)}
-                  onChange={(event) => handleChange('sortOrder', Number(event.target.value) || 1)}
-                  readOnly={isReadOnly || isSaving}
-                />
-              </Field>
-              <Field label="Hiển thị">
-                <label className="flex h-10 items-center gap-3 rounded-xl border border-slate-200 px-3">
-                  <input
-                    type="checkbox"
-                    checked={form.isVisible}
-                    onChange={(event) => handleChange('isVisible', event.target.checked)}
-                    disabled={isReadOnly || isSaving}
-                    className="h-4 w-4 rounded border-slate-300"
-                  />
-                  <span className="text-sm text-slate-700">{form.isVisible ? 'Đang hiển thị' : 'Đang ẩn'}</span>
-                </label>
-              </Field>
-              <Field label="Nổi bật">
-                <label className="flex h-10 items-center gap-3 rounded-xl border border-slate-200 px-3">
-                  <input
-                    type="checkbox"
-                    checked={form.isFeatured}
-                    onChange={(event) => handleChange('isFeatured', event.target.checked)}
-                    disabled={isReadOnly || isSaving}
-                    className="h-4 w-4 rounded border-slate-300"
-                  />
-                  <span className="text-sm text-slate-700">{form.isFeatured ? 'Sản phẩm nổi bật' : 'Không nổi bật'}</span>
-                </label>
-              </Field>
             </div>
           ) : null}
 
@@ -400,7 +435,7 @@ export function ProductModal({
                       <div>
                         <div className="text-sm font-semibold text-slate-900">Import nội dung từ Word</div>
                         <div className="text-xs leading-5 text-slate-500">
-                          Dùng cho phần mô tả sản phẩm. Chọn file <code>.docx</code> là hệ thống sẽ tự import luôn.
+                          Chọn file <code>.docx</code>, hệ thống sẽ tự import nội dung.
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-3">
@@ -460,9 +495,9 @@ export function ProductModal({
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="mb-3 text-sm font-semibold text-slate-900">Gợi ý biên tập</div>
                 <div className="space-y-3 text-sm leading-6 text-slate-600">
-                  <p>Mô tả ngắn dùng cho đoạn giới thiệu hiển thị ở danh sách và phần đầu trang chi tiết.</p>
-                  <p>Sau khi import từ Word, hãy rà lại tên sản phẩm, ảnh đại diện, bảng thông số và xuống dòng.</p>
-                  <p>Nếu Word có bảng lớn, nên xem ở tab xem trước để chắc layout không bị tràn trên mobile.</p>
+                  <p>Mô tả ngắn dùng cho danh sách và phần đầu trang chi tiết.</p>
+                  <p>Sau khi import từ Word, kiểm tra lại tên, ảnh đại diện và bố cục.</p>
+                  <p>Khi bài có nhiều ảnh hoặc bảng, tab xem trước sẽ giúp kiểm tra trên mobile.</p>
                 </div>
               </div>
             </div>
@@ -489,9 +524,7 @@ export function ProductModal({
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="mb-3 text-sm font-semibold text-slate-900">Xem trước SEO</div>
                 <div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-4">
-                  <div className="text-lg font-semibold leading-6 text-[#1a0dab]">
-                    {form.titleSeo || form.title || 'Tiêu đề SEO'}
-                  </div>
+                  <div className="text-lg font-semibold leading-6 text-[#1a0dab]">{form.titleSeo || form.title || 'Tiêu đề SEO'}</div>
                   <div className="text-sm text-emerald-700">xetai365.vn/{form.slug || 'duong-dan-san-pham'}</div>
                   <div className="text-sm leading-6 text-slate-600">
                     {form.metaDescription || form.shortDescription || 'Mô tả SEO sẽ hiển thị ở đây.'}
@@ -504,8 +537,8 @@ export function ProductModal({
           {activeTab === 'preview' ? (
             <div className="mx-auto max-w-4xl space-y-6">
               <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-                {form.imageUrl ? (
-                  <img src={form.imageUrl} alt={form.title || 'Ảnh sản phẩm'} className="h-72 w-full object-cover" />
+                {previewImageUrl ? (
+                  <img src={previewImageUrl} alt={form.title || 'Ảnh sản phẩm'} className="h-72 w-full object-cover" />
                 ) : (
                   <div className="flex h-72 items-center justify-center bg-slate-100 text-sm text-slate-500">Chưa có ảnh đại diện</div>
                 )}
@@ -527,13 +560,11 @@ export function ProductModal({
                   </p>
                   {previewHtml ? (
                     <div
-                      className="prose prose-slate max-w-none text-sm leading-7 [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-md [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-slate-200 [&_td]:p-2 [&_th]:border [&_th]:border-slate-200 [&_th]:bg-slate-50 [&_th]:p-2"
+                      className="rich-content prose prose-slate max-w-none text-sm leading-7 [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-md [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-slate-200 [&_td]:p-2 [&_th]:border [&_th]:border-slate-200 [&_th]:bg-slate-50 [&_th]:p-2"
                       dangerouslySetInnerHTML={{ __html: sanitizeHtml(form.content) }}
                     />
                   ) : (
-                    <div className="whitespace-pre-line text-sm leading-7 text-slate-600">
-                      {form.content || 'Nội dung chi tiết sẽ hiển thị ở đây.'}
-                    </div>
+                    <div className="whitespace-pre-line text-sm leading-7 text-slate-600">{form.content || 'Nội dung chi tiết sẽ hiển thị ở đây.'}</div>
                   )}
                 </div>
               </div>
@@ -551,8 +582,8 @@ export function ProductModal({
             </Button>
           ) : null}
           {!isReadOnly ? (
-            <Button type="button" onClick={handleSubmit} disabled={isSaving}>
-              {isSaving ? 'Đang lưu...' : mode === 'create' ? 'Tạo sản phẩm' : 'Lưu thay đổi'}
+            <Button type="button" onClick={() => void handleSubmit()} disabled={isSaving || isUploadingImage}>
+              {isSaving || isUploadingImage ? 'Đang lưu...' : mode === 'create' ? 'Tạo sản phẩm' : 'Lưu thay đổi'}
             </Button>
           ) : null}
         </div>

@@ -152,6 +152,7 @@ export function AdminBulletinModal({
   const [form, setForm] = useState<FormState>(() => createEmptyForm(type));
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [selectedDocxFile, setSelectedDocxFile] = useState<File | null>(null);
+  const [selectedImagePreviewUrl, setSelectedImagePreviewUrl] = useState('');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isImportingDocx, setIsImportingDocx] = useState(false);
   const [uploadError, setUploadError] = useState('');
@@ -166,6 +167,7 @@ export function AdminBulletinModal({
     setForm(item ? mapBulletinToForm(item) : createEmptyForm(type));
     setSelectedImageFile(null);
     setSelectedDocxFile(null);
+    setSelectedImagePreviewUrl('');
     setIsUploadingImage(false);
     setIsImportingDocx(false);
     setUploadError('');
@@ -174,6 +176,18 @@ export function AdminBulletinModal({
     setDocxImportWarnings([]);
     setActiveTab('info');
   }, [item, open, type]);
+
+  useEffect(() => {
+    if (!selectedImageFile) {
+      setSelectedImagePreviewUrl('');
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(selectedImageFile);
+    setSelectedImagePreviewUrl(objectUrl);
+
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [selectedImageFile]);
 
   useEffect(() => {
     if (!open || isSaving) return;
@@ -188,42 +202,59 @@ export function AdminBulletinModal({
 
   const isReadOnly = mode === 'view';
   const previewHtml = hasHtml(form.content);
+  const previewImageUrl = selectedImagePreviewUrl || form.imageUrl;
 
   const handleChange = <K extends keyof FormState>(key: K, value: FormState[K]) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  };
+    setForm((prev) => {
+      if (key === 'title') {
+        const nextTitle = String(value);
+        return {
+          ...prev,
+          title: nextTitle,
+          slug: mode === 'create' ? slugifyVietnamese(nextTitle) : prev.slug,
+        };
+      }
 
-  const handleSubmit = () => {
-    if (isReadOnly) {
-      onClose();
-      return;
-    }
-
-    onSave({
-      ...form,
-      bulletinType: type,
+      return { ...prev, [key]: value };
     });
   };
 
-  const handleUploadImage = async () => {
+  const uploadPendingImage = async () => {
     if (!selectedImageFile) {
-      setUploadError('Vui lòng chọn ảnh trước khi upload.');
-      return;
+      return form.imageUrl;
     }
 
     const folder =
       type === 'recruitment' ? 'recruitment' : type === 'news_event' ? 'news' : 'promotions';
 
+    setIsUploadingImage(true);
+    setUploadError('');
+
     try {
-      setIsUploadingImage(true);
-      setUploadError('');
       const uploaded = await uploadAdminImage(selectedImageFile, folder);
-      handleChange('imageUrl', uploaded.imageUrl);
-      setSelectedImageFile(null);
+      return uploaded.imageUrl;
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : 'Không thể upload ảnh.');
+      throw new Error(err instanceof Error ? err.message : 'Không thể upload ảnh.');
     } finally {
       setIsUploadingImage(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (isReadOnly) {
+      onClose();
+      return;
+    }
+
+    try {
+      const imageUrl = await uploadPendingImage();
+      onSave({
+        ...form,
+        bulletinType: type,
+        imageUrl,
+      });
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Không thể upload ảnh.');
     }
   };
 
@@ -231,12 +262,11 @@ export function AdminBulletinModal({
     setForm((prev) => {
       const nextTitle = prev.title || imported.title;
       const nextExcerpt = imported.excerpt || prev.excerpt;
-      const nextSlug = prev.slug || slugifyVietnamese(nextTitle);
 
       return {
         ...prev,
         title: nextTitle,
-        slug: nextSlug,
+        slug: mode === 'create' ? slugifyVietnamese(nextTitle) : prev.slug,
         excerpt: nextExcerpt,
         descriptionShort: prev.descriptionShort || imported.excerpt,
         content: imported.content || prev.content,
@@ -314,7 +344,7 @@ export function AdminBulletinModal({
                 <Input value={form.title} onChange={(event) => handleChange('title', event.target.value)} readOnly={isReadOnly || isSaving} />
               </Field>
               <Field label="Slug">
-                <Input value={form.slug} onChange={(event) => handleChange('slug', event.target.value)} readOnly={isReadOnly || isSaving} />
+                <Input value={form.slug} readOnly />
               </Field>
               <Field label="Trạng thái">
                 {isReadOnly ? (
@@ -323,6 +353,8 @@ export function AdminBulletinModal({
                   <select
                     value={form.status}
                     onChange={(event) => handleChange('status', event.target.value as AdminBulletinStatus)}
+                    aria-label="Trạng thái bài viết"
+                    title="Trạng thái bài viết"
                     className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
                   >
                     <option value="draft">Bản nháp</option>
@@ -339,13 +371,12 @@ export function AdminBulletinModal({
                   readOnly={isReadOnly || isSaving}
                 />
               </Field>
-              <div className="md:col-span-2">
+              <div className="md:col-span-2 grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
                 <Field label="Ảnh đại diện">
-                  <div className="space-y-3">
-                    <Input value={form.imageUrl} onChange={(event) => handleChange('imageUrl', event.target.value)} readOnly={isReadOnly || isSaving} />
+                  <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     {!isReadOnly ? (
-                      <div className="flex flex-wrap items-center gap-3">
-                        <label className="inline-flex cursor-pointer items-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
+                      <div className="flex flex-wrap items-center gap-4">
+                        <label className="inline-flex cursor-pointer items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
                           <input
                             type="file"
                             accept="image/*"
@@ -358,53 +389,55 @@ export function AdminBulletinModal({
                           />
                           Chọn ảnh
                         </label>
-                        <Button type="button" variant="outline" onClick={() => void handleUploadImage()} disabled={isSaving || isUploadingImage}>
-                          {isUploadingImage ? 'Đang upload...' : 'Upload ảnh'}
-                        </Button>
+                        <div className="text-xs text-slate-500">Ảnh sẽ tự upload khi nhấn lưu.</div>
                       </div>
                     ) : null}
-                    <div className="text-xs text-slate-500">{selectedImageFile ? selectedImageFile.name : 'Chưa chọn tệp ảnh.'}</div>
+                    <div className="text-xs text-slate-500">
+                      {selectedImageFile ? selectedImageFile.name : previewImageUrl ? 'Đang dùng ảnh hiện tại.' : 'Chưa chọn tệp ảnh.'}
+                    </div>
                     {uploadError ? <div className="text-xs text-red-600">{uploadError}</div> : null}
-                    {form.imageUrl ? (
-                      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-2">
-                        <img src={form.imageUrl} alt={form.title || 'Ảnh bài viết'} className="h-56 w-full rounded-xl object-cover" />
+                    {previewImageUrl ? (
+                      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-3">
+                        <img src={previewImageUrl} alt={form.title || 'Ảnh bài viết'} className="h-24 w-24 rounded-xl object-cover" />
                       </div>
                     ) : null}
                   </div>
                 </Field>
+                <div className="space-y-4">
+                  <Field label="Thứ tự">
+                    <Input
+                      type="number"
+                      value={String(form.sortOrder)}
+                      onChange={(event) => handleChange('sortOrder', Number(event.target.value) || 1)}
+                      readOnly={isReadOnly || isSaving}
+                    />
+                  </Field>
+                  <Field label="Hiển thị">
+                    <label className="flex h-10 items-center gap-3 rounded-xl border border-slate-200 px-3">
+                      <input
+                        type="checkbox"
+                        checked={form.isVisible}
+                        onChange={(event) => handleChange('isVisible', event.target.checked)}
+                        disabled={isReadOnly || isSaving}
+                        className="h-4 w-4 rounded border-slate-300"
+                      />
+                      <span className="text-sm text-slate-700">{form.isVisible ? 'Đang hiển thị' : 'Đang ẩn'}</span>
+                    </label>
+                  </Field>
+                  <Field label="Nổi bật">
+                    <label className="flex h-10 items-center gap-3 rounded-xl border border-slate-200 px-3">
+                      <input
+                        type="checkbox"
+                        checked={form.isFeatured}
+                        onChange={(event) => handleChange('isFeatured', event.target.checked)}
+                        disabled={isReadOnly || isSaving}
+                        className="h-4 w-4 rounded border-slate-300"
+                      />
+                      <span className="text-sm text-slate-700">{form.isFeatured ? 'Bài viết nổi bật' : 'Không nổi bật'}</span>
+                    </label>
+                  </Field>
+                </div>
               </div>
-              <Field label="Thứ tự">
-                <Input
-                  type="number"
-                  value={String(form.sortOrder)}
-                  onChange={(event) => handleChange('sortOrder', Number(event.target.value) || 1)}
-                  readOnly={isReadOnly || isSaving}
-                />
-              </Field>
-              <Field label="Hiển thị">
-                <label className="flex h-10 items-center gap-3 rounded-xl border border-slate-200 px-3">
-                  <input
-                    type="checkbox"
-                    checked={form.isVisible}
-                    onChange={(event) => handleChange('isVisible', event.target.checked)}
-                    disabled={isReadOnly || isSaving}
-                    className="h-4 w-4 rounded border-slate-300"
-                  />
-                  <span className="text-sm text-slate-700">{form.isVisible ? 'Đang hiển thị' : 'Đang ẩn'}</span>
-                </label>
-              </Field>
-              <Field label="Nổi bật">
-                <label className="flex h-10 items-center gap-3 rounded-xl border border-slate-200 px-3">
-                  <input
-                    type="checkbox"
-                    checked={form.isFeatured}
-                    onChange={(event) => handleChange('isFeatured', event.target.checked)}
-                    disabled={isReadOnly || isSaving}
-                    className="h-4 w-4 rounded border-slate-300"
-                  />
-                  <span className="text-sm text-slate-700">{form.isFeatured ? 'Bài viết nổi bật' : 'Không nổi bật'}</span>
-                </label>
-              </Field>
             </div>
           ) : null}
 
@@ -417,7 +450,7 @@ export function AdminBulletinModal({
                       <div>
                         <div className="text-sm font-semibold text-slate-900">Import nội dung từ Word</div>
                         <div className="text-xs leading-5 text-slate-500">
-                          Hỗ trợ file <code>.docx</code> có text, ảnh và bảng. Chọn file là hệ thống sẽ tự import luôn.
+                          Chọn file <code>.docx</code>, hệ thống sẽ tự import nội dung.
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-3">
@@ -462,6 +495,8 @@ export function AdminBulletinModal({
                     value={form.excerpt}
                     onChange={(event) => handleChange('excerpt', event.target.value)}
                     readOnly={isReadOnly || isSaving}
+                    aria-label="Mô tả ngắn"
+                    title="Mô tả ngắn"
                     className="min-h-24 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
                   />
                 </Field>
@@ -470,6 +505,8 @@ export function AdminBulletinModal({
                     value={form.content}
                     onChange={(event) => handleChange('content', event.target.value)}
                     readOnly={isReadOnly || isSaving}
+                    aria-label="Nội dung bài viết"
+                    title="Nội dung bài viết"
                     className="min-h-[420px] w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
                   />
                 </Field>
@@ -477,9 +514,9 @@ export function AdminBulletinModal({
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="mb-3 text-sm font-semibold text-slate-900">Gợi ý biên tập</div>
                 <div className="space-y-3 text-sm leading-6 text-slate-600">
-                  <p>Mô tả ngắn nên đủ để hiển thị ở danh sách tin và thẻ preview mạng xã hội.</p>
-                  <p>Nếu nhập từ Word, hãy kiểm tra lại tiêu đề, đoạn mở đầu, ảnh đại diện và bảng dữ liệu trước khi lưu.</p>
-                  <p>Khi bài có bảng hoặc nhiều ảnh, tab xem trước sẽ giúp bạn phát hiện sớm lỗi xuống dòng và tràn nội dung.</p>
+                  <p>Mô tả ngắn nên đủ để hiển thị ở danh sách và preview mạng xã hội.</p>
+                  <p>Nếu nhập từ Word, hãy kiểm tra lại tiêu đề, đoạn mở đầu và ảnh đại diện.</p>
+                  <p>Khi bài có nhiều ảnh hoặc bảng, tab xem trước sẽ giúp phát hiện lỗi bố cục.</p>
                 </div>
               </div>
             </div>
@@ -499,6 +536,8 @@ export function AdminBulletinModal({
                     value={form.metaDescription}
                     onChange={(event) => handleChange('metaDescription', event.target.value)}
                     readOnly={isReadOnly || isSaving}
+                    aria-label="Meta description"
+                    title="Meta description"
                     className="min-h-32 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
                   />
                 </Field>
@@ -506,13 +545,9 @@ export function AdminBulletinModal({
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="mb-3 text-sm font-semibold text-slate-900">Xem trước SEO</div>
                 <div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-4">
-                  <div className="text-lg font-semibold leading-6 text-[#1a0dab]">
-                    {form.titleSeo || form.title || 'Tiêu đề SEO'}
-                  </div>
+                  <div className="text-lg font-semibold leading-6 text-[#1a0dab]">{form.titleSeo || form.title || 'Tiêu đề SEO'}</div>
                   <div className="text-sm text-emerald-700">xetai365.vn/{form.slug || 'duong-dan-bai-viet'}</div>
-                  <div className="text-sm leading-6 text-slate-600">
-                    {form.metaDescription || form.excerpt || 'Mô tả SEO sẽ hiển thị ở đây.'}
-                  </div>
+                  <div className="text-sm leading-6 text-slate-600">{form.metaDescription || form.excerpt || 'Mô tả SEO sẽ hiển thị ở đây.'}</div>
                 </div>
               </div>
             </div>
@@ -521,8 +556,8 @@ export function AdminBulletinModal({
           {activeTab === 'preview' ? (
             <div className="mx-auto max-w-4xl space-y-6">
               <article className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-                {form.imageUrl ? (
-                  <img src={form.imageUrl} alt={form.title || 'Ảnh bài viết'} className="h-80 w-full object-cover" />
+                {previewImageUrl ? (
+                  <img src={previewImageUrl} alt={form.title || 'Ảnh bài viết'} className="h-80 w-full object-cover" />
                 ) : (
                   <div className="flex h-80 items-center justify-center bg-slate-100 text-sm text-slate-500">Chưa có ảnh đại diện</div>
                 )}
@@ -532,19 +567,15 @@ export function AdminBulletinModal({
                       {translateBulletinStatus(form.status)}
                     </div>
                     <h3 className="text-3xl font-black text-slate-950">{form.title || 'Tiêu đề bài viết'}</h3>
-                    <p className="text-base font-medium leading-7 text-slate-700">
-                      {form.excerpt || 'Mô tả ngắn sẽ hiển thị ở đây.'}
-                    </p>
+                    <p className="text-base font-medium leading-7 text-slate-700">{form.excerpt || 'Mô tả ngắn sẽ hiển thị ở đây.'}</p>
                   </div>
                   {previewHtml ? (
                     <div
-                      className="prose prose-slate max-w-none text-sm leading-7 [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-md [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-slate-200 [&_td]:p-2 [&_th]:border [&_th]:border-slate-200 [&_th]:bg-slate-50 [&_th]:p-2"
+                      className="rich-content prose prose-slate max-w-none text-sm leading-7 [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-md [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-slate-200 [&_td]:p-2 [&_th]:border [&_th]:border-slate-200 [&_th]:bg-slate-50 [&_th]:p-2"
                       dangerouslySetInnerHTML={{ __html: sanitizeHtml(form.content) }}
                     />
                   ) : (
-                    <div className="whitespace-pre-line text-sm leading-7 text-slate-600">
-                      {form.content || 'Nội dung bài viết sẽ hiển thị ở đây.'}
-                    </div>
+                    <div className="whitespace-pre-line text-sm leading-7 text-slate-600">{form.content || 'Nội dung bài viết sẽ hiển thị ở đây.'}</div>
                   )}
                 </div>
               </article>
@@ -562,8 +593,8 @@ export function AdminBulletinModal({
             </Button>
           ) : null}
           {!isReadOnly ? (
-            <Button type="button" onClick={handleSubmit} disabled={isSaving}>
-              {isSaving ? 'Đang lưu...' : mode === 'create' ? 'Tạo bài viết' : 'Lưu thay đổi'}
+            <Button type="button" onClick={() => void handleSubmit()} disabled={isSaving || isUploadingImage}>
+              {isSaving || isUploadingImage ? 'Đang lưu...' : mode === 'create' ? 'Tạo bài viết' : 'Lưu thay đổi'}
             </Button>
           ) : null}
         </div>
