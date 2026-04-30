@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { AdminConfirmModal } from '../../components/AdminConfirmModal';
 import type { AdminVehicleCategory } from '../../api/adminApi';
 
 type CategoryLevel2ModalProps = {
@@ -61,18 +62,37 @@ export function CategoryLevel2Modal({
   onSave,
 }: CategoryLevel2ModalProps) {
   const [form, setForm] = useState<FormState>(createFormState(item));
+  const [initialSnapshot, setInitialSnapshot] = useState(() => JSON.stringify(createFormState(item)));
+  const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const nextForm = createFormState(item);
+    setForm(nextForm);
+    setInitialSnapshot(JSON.stringify(nextForm));
+    setConfirmCloseOpen(false);
+  }, [item, open]);
+
+  const requestClose = () => {
+    if (isSaving) return;
+    if (mode === 'edit' && JSON.stringify(form) !== initialSnapshot) {
+      setConfirmCloseOpen(true);
+      return;
+    }
+    onClose();
+  };
 
   useEffect(() => {
     if (!open || isSaving) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') requestClose();
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSaving, onClose, open]);
+  }, [form, initialSnapshot, isSaving, mode, onClose, open]);
 
   if (!open || !item) return null;
 
@@ -95,7 +115,7 @@ export function CategoryLevel2Modal({
 
   const handleSubmit = () => {
     if (isReadOnly) {
-      onClose();
+      requestClose();
       return;
     }
 
@@ -115,7 +135,7 @@ export function CategoryLevel2Modal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm"
       onMouseDown={(event) => {
         if (isSaving) return;
-        if (panelRef.current && !panelRef.current.contains(event.target as Node)) onClose();
+        if (panelRef.current && !panelRef.current.contains(event.target as Node)) requestClose();
       }}
     >
       <div
@@ -132,7 +152,7 @@ export function CategoryLevel2Modal({
             <p className="text-sm text-slate-500">Slug: {item.slug}</p>
           </div>
 
-          <Button type="button" variant="outline" size="icon-sm" onClick={onClose} aria-label="Đóng modal" disabled={isSaving}>
+          <Button type="button" variant="outline" size="icon-sm" onClick={requestClose} aria-label="Đóng modal" disabled={isSaving}>
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -178,7 +198,7 @@ export function CategoryLevel2Modal({
         </div>
 
         <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-          <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
+          <Button type="button" variant="outline" onClick={requestClose} disabled={isSaving}>
             Đóng
           </Button>
           {isReadOnly ? (
@@ -193,6 +213,20 @@ export function CategoryLevel2Modal({
           ) : null}
         </div>
       </div>
+
+      <AdminConfirmModal
+        open={confirmCloseOpen}
+        title="Đóng chỉnh sửa danh mục?"
+        description="Bạn đang có thay đổi chưa lưu. Nếu đóng bây giờ, các chỉnh sửa sẽ bị mất."
+        confirmLabel="Đóng không lưu"
+        cancelLabel="Tiếp tục chỉnh sửa"
+        busy={isSaving}
+        onCancel={() => setConfirmCloseOpen(false)}
+        onConfirm={() => {
+          setConfirmCloseOpen(false);
+          onClose();
+        }}
+      />
     </div>
   );
 }

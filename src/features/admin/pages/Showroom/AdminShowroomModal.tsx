@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { AdminConfirmModal } from '../../components/AdminConfirmModal';
 
 export type ShowroomItem = {
   id: string;
@@ -35,23 +36,37 @@ export function AdminShowroomModal({
   onSave,
 }: AdminShowroomModalProps) {
   const [form, setForm] = useState<ShowroomItem>(() => item || createEmptyItem());
+  const [initialSnapshot, setInitialSnapshot] = useState(() => JSON.stringify(item || createEmptyItem()));
+  const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
-    setForm(item || createEmptyItem());
+    const nextForm = item || createEmptyItem();
+    setForm(nextForm);
+    setInitialSnapshot(JSON.stringify(nextForm));
+    setConfirmCloseOpen(false);
   }, [item, open]);
+
+  const requestClose = () => {
+    if (isSaving) return;
+    if (JSON.stringify(form) !== initialSnapshot) {
+      setConfirmCloseOpen(true);
+      return;
+    }
+    onClose();
+  };
 
   useEffect(() => {
     if (!open || isSaving) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') requestClose();
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSaving, onClose, open]);
+  }, [form, initialSnapshot, isSaving, onClose, open]);
 
   if (!open) return null;
 
@@ -68,7 +83,7 @@ export function AdminShowroomModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm"
       onMouseDown={(event) => {
         if (isSaving) return;
-        if (panelRef.current && !panelRef.current.contains(event.target as Node)) onClose();
+        if (panelRef.current && !panelRef.current.contains(event.target as Node)) requestClose();
       }}
     >
       <div
@@ -86,7 +101,7 @@ export function AdminShowroomModal({
             </h2>
           </div>
 
-          <Button type="button" variant="outline" size="icon-sm" onClick={onClose} disabled={isSaving}>
+          <Button type="button" variant="outline" size="icon-sm" onClick={requestClose} disabled={isSaving}>
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -115,7 +130,7 @@ export function AdminShowroomModal({
         </div>
 
         <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-          <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
+          <Button type="button" variant="outline" onClick={requestClose} disabled={isSaving}>
             Đóng
           </Button>
           <Button
@@ -127,6 +142,20 @@ export function AdminShowroomModal({
           </Button>
         </div>
       </div>
+
+      <AdminConfirmModal
+        open={confirmCloseOpen}
+        title="Đóng form showroom?"
+        description="Bạn đang có thay đổi chưa lưu. Nếu đóng bây giờ, các chỉnh sửa sẽ bị mất."
+        confirmLabel="Đóng không lưu"
+        cancelLabel="Tiếp tục chỉnh sửa"
+        busy={isSaving}
+        onCancel={() => setConfirmCloseOpen(false)}
+        onConfirm={() => {
+          setConfirmCloseOpen(false);
+          onClose();
+        }}
+      />
     </div>
   );
 }

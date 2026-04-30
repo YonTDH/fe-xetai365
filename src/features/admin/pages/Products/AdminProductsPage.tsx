@@ -13,6 +13,7 @@ import {
   type AdminProductPayload,
   type AdminVehicleCategory,
 } from '../../api/adminApi';
+import { AdminConfirmModal } from '../../components/AdminConfirmModal';
 import { AdminDataTable, type AdminTableColumn } from '../../components/AdminDataTable';
 import { AdminTableFilters } from '../../components/AdminTableFilters';
 import { ProductModal } from './ProductModal';
@@ -87,6 +88,7 @@ export function AdminProductsPage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [modalState, setModalState] = useState<ModalState>(null);
   const [deleteState, setDeleteState] = useState<DeleteState>(null);
+  const [bulkDeleteCount, setBulkDeleteCount] = useState(0);
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'visible' | 'hidden'>('all');
   const [categoryFilter, setCategoryFilter] = useState<number>(0);
@@ -98,7 +100,7 @@ export function AdminProductsPage() {
       const [productItems, categoryTree] = await Promise.all([listAdminProducts(), listAdminVehicleCategoriesTree()]);
       setItems(productItems);
       setCategories(categoryTree);
-    } catch (err) {
+    } catch (err: any) {
       setItems([]);
       setCategories([]);
       setError(err instanceof Error ? err.message : 'Không thể tải sản phẩm.');
@@ -189,8 +191,9 @@ export function AdminProductsPage() {
       }
       setModalState(null);
       await loadData();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Không thể lưu sản phẩm.';
+    } catch (err: any) {
+      let message = 'Khong the xoa muc da chon.';
+      if (err instanceof globalThis.Error) message = err.message;
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -218,8 +221,9 @@ export function AdminProductsPage() {
       setSelectedIds((prev) => prev.filter((id) => id !== deleteState.id));
       setDeleteState(null);
       showToast({ type: 'success', message: `Đã xóa sản phẩm "${deleted.title || deleteState.title}".` });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Không thể xóa sản phẩm.';
+    } catch (err: any) {
+      let message = 'Khong the xoa muc da chon.';
+      if (err instanceof globalThis.Error) message = err.message;
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -267,8 +271,9 @@ export function AdminProductsPage() {
         type: 'success',
         message: `${isVisible ? 'Đã hiển thị' : 'Đã ẩn'} ${selectedItems.length} sản phẩm.`,
       });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Không thể cập nhật trạng thái hiển thị.';
+    } catch (err: any) {
+      let message = 'Khong the xoa muc da chon.';
+      if (err instanceof globalThis.Error) message = err.message;
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -278,6 +283,8 @@ export function AdminProductsPage() {
 
   const handleBulkDelete = async () => {
     if (!selectedItems.length) return;
+    setBulkDeleteCount(selectedItems.length);
+    return;
 
     try {
       setIsSaving(true);
@@ -289,8 +296,33 @@ export function AdminProductsPage() {
         type: 'success',
         message: `Đã xóa ${selectedItems.length} sản phẩm.`,
       });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Không thể xóa sản phẩm đã chọn.';
+    } catch (err: any) {
+      let message = 'Khong the xoa muc da chon.';
+      if (err instanceof globalThis.Error) message = err.message;
+      setError(message);
+      showToast({ type: 'error', message });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    if (!selectedItems.length) return;
+
+    try {
+      setIsSaving(true);
+      setError('');
+      await Promise.all(selectedItems.map((item) => deleteAdminProduct(item.id)));
+      setSelectedIds([]);
+      await loadData();
+      setBulkDeleteCount(0);
+      showToast({
+        type: 'success',
+        message: `Da xoa ${selectedItems.length} san pham.`,
+      });
+    } catch (err: any) {
+      let message = 'Khong the xoa san pham da chon.';
+      if (err instanceof globalThis.Error) message = err.message;
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -488,6 +520,22 @@ export function AdminProductsPage() {
           </div>
         </div>
       ) : null}
+
+      <AdminConfirmModal
+        open={bulkDeleteCount > 0}
+        title={`Xóa ${bulkDeleteCount} sản phẩm?`}
+        description="Hành động này sẽ xóa vĩnh viễn các sản phẩm đã chọn khỏi hệ thống quản trị."
+        confirmLabel={isSaving ? 'Đang xóa...' : 'Xóa các sản phẩm'}
+        busy={isSaving}
+        onCancel={() => {
+          if (isSaving) return;
+          setBulkDeleteCount(0);
+        }}
+        onConfirm={() => void handleConfirmBulkDelete()}
+      />
     </>
   );
 }
+
+
+

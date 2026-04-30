@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { sanitizeHtml } from '@/lib/sanitizeHtml';
+import { AdminConfirmModal } from './AdminConfirmModal';
 import {
   importAdminBulletinDocx,
   uploadAdminImage,
@@ -160,11 +161,15 @@ export function AdminBulletinModal({
   const [docxImportSuccess, setDocxImportSuccess] = useState('');
   const [docxImportWarnings, setDocxImportWarnings] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<BulletinTab>('info');
+  const [initialSnapshot, setInitialSnapshot] = useState('');
+  const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
-    setForm(item ? mapBulletinToForm(item) : createEmptyForm(type));
+    const nextForm = item ? mapBulletinToForm(item) : createEmptyForm(type);
+    setForm(nextForm);
+    setInitialSnapshot(JSON.stringify(nextForm));
     setSelectedImageFile(null);
     setSelectedDocxFile(null);
     setSelectedImagePreviewUrl('');
@@ -175,7 +180,17 @@ export function AdminBulletinModal({
     setDocxImportSuccess('');
     setDocxImportWarnings([]);
     setActiveTab('info');
+    setConfirmCloseOpen(false);
   }, [item, open, type]);
+
+  const requestClose = () => {
+    if (isSaving) return;
+    if (mode !== 'view' && (JSON.stringify(form) !== initialSnapshot || selectedImageFile || selectedDocxFile)) {
+      setConfirmCloseOpen(true);
+      return;
+    }
+    onClose();
+  };
 
   useEffect(() => {
     if (!selectedImageFile) {
@@ -192,11 +207,11 @@ export function AdminBulletinModal({
   useEffect(() => {
     if (!open || isSaving) return;
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') requestClose();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSaving, onClose, open]);
+  }, [form, initialSnapshot, isSaving, mode, onClose, open, selectedDocxFile, selectedImageFile]);
 
   if (!open) return null;
 
@@ -248,7 +263,7 @@ export function AdminBulletinModal({
 
   const handleSubmit = async () => {
     if (isReadOnly) {
-      onClose();
+      requestClose();
       return;
     }
 
@@ -314,7 +329,7 @@ export function AdminBulletinModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm"
       onMouseDown={(event) => {
         if (isSaving) return;
-        if (panelRef.current && !panelRef.current.contains(event.target as Node)) onClose();
+        if (panelRef.current && !panelRef.current.contains(event.target as Node)) requestClose();
       }}
     >
       <div
@@ -329,7 +344,7 @@ export function AdminBulletinModal({
             </div>
             <h2 className="text-2xl font-black text-slate-950">{item?.title || 'Bài viết mới'}</h2>
           </div>
-          <Button type="button" variant="outline" size="icon-sm" onClick={onClose} disabled={isSaving}>
+          <Button type="button" variant="outline" size="icon-sm" onClick={requestClose} disabled={isSaving}>
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -343,9 +358,9 @@ export function AdminBulletinModal({
           </div>
         </div>
 
-        <div className="overflow-y-auto px-6 py-5">
+        <div className="flex-1 overflow-y-auto px-6 py-5">
           {activeTab === 'info' ? (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid min-h-[560px] gap-4 md:grid-cols-2">
               <Field label="Tiêu đề">
                 <Input value={form.title} onChange={(event) => handleChange('title', event.target.value)} readOnly={isReadOnly || isSaving} />
               </Field>
@@ -377,7 +392,7 @@ export function AdminBulletinModal({
                   readOnly={isReadOnly || isSaving}
                 />
               </Field>
-              <div className="md:col-span-2 grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+              <div className="md:col-span-2 grid gap-4 xl:grid-cols-[minmax(0,1fr)_120px_220px_220px] xl:items-start">
                 <Field label="Ảnh đại diện">
                   <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     {!isReadOnly ? (
@@ -409,7 +424,7 @@ export function AdminBulletinModal({
                     ) : null}
                   </div>
                 </Field>
-                <div className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2 xl:col-span-3 xl:grid-cols-[120px_220px_220px]">
                   <Field label="Thứ tự">
                     <Input
                       type="number"
@@ -448,7 +463,7 @@ export function AdminBulletinModal({
           ) : null}
 
           {activeTab === 'content' ? (
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="grid min-h-[560px] gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
               <div className="space-y-4">
                 {!isReadOnly ? (
                   <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
@@ -529,7 +544,7 @@ export function AdminBulletinModal({
           ) : null}
 
           {activeTab === 'seo' ? (
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="grid min-h-[560px] gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
               <div className="space-y-4">
                 <Field label="Title SEO">
                   <Input value={form.titleSeo} onChange={(event) => handleChange('titleSeo', event.target.value)} readOnly={isReadOnly || isSaving} />
@@ -560,7 +575,7 @@ export function AdminBulletinModal({
           ) : null}
 
           {activeTab === 'preview' ? (
-            <div className="mx-auto max-w-4xl space-y-6">
+            <div className="mx-auto min-h-[560px] max-w-4xl space-y-6">
               <article className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
                 {previewImageUrl ? (
                   <img src={previewImageUrl} alt={form.title || 'Ảnh bài viết'} className="h-80 w-full object-cover" />
@@ -590,7 +605,7 @@ export function AdminBulletinModal({
         </div>
 
         <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
-          <Button type="button" variant="outline" onClick={onClose} disabled={isSaving}>
+          <Button type="button" variant="outline" onClick={requestClose} disabled={isSaving}>
             Đóng
           </Button>
           {isReadOnly ? (
@@ -605,6 +620,20 @@ export function AdminBulletinModal({
           ) : null}
         </div>
       </div>
+
+      <AdminConfirmModal
+        open={confirmCloseOpen}
+        title="Đóng chỉnh sửa bài viết?"
+        description="Bạn đang có thay đổi chưa lưu. Nếu đóng bây giờ, các chỉnh sửa sẽ bị mất."
+        confirmLabel="Đóng không lưu"
+        cancelLabel="Tiếp tục chỉnh sửa"
+        busy={isSaving}
+        onCancel={() => setConfirmCloseOpen(false)}
+        onConfirm={() => {
+          setConfirmCloseOpen(false);
+          onClose();
+        }}
+      />
     </div>
   );
 }

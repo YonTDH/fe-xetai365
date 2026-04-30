@@ -9,6 +9,7 @@ import {
   updateAdminVehicleCategoryLevel1,
   type AdminVehicleCategory,
 } from '../../api/adminApi';
+import { AdminConfirmModal } from '../../components/AdminConfirmModal';
 import { AdminDataTable, type AdminTableColumn } from '../../components/AdminDataTable';
 import { AdminTableFilters } from '../../components/AdminTableFilters';
 import { CategoryLevel1Modal } from './CategoryLevel1Modal';
@@ -77,6 +78,7 @@ export function AdminCategoryLevel1Page() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [modalState, setModalState] = useState<ModalState>(null);
   const [deleteState, setDeleteState] = useState<DeleteState>(null);
+  const [bulkDeleteCount, setBulkDeleteCount] = useState(0);
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'visible' | 'hidden'>('all');
 
@@ -86,7 +88,7 @@ export function AdminCategoryLevel1Page() {
       setError('');
       const data = await listAdminVehicleCategoriesTree();
       setItems(data);
-    } catch (err) {
+    } catch (err: any) {
       setItems([]);
       setError(err instanceof Error ? err.message : 'Không thể tải danh mục cấp 1.');
     } finally {
@@ -166,8 +168,9 @@ export function AdminCategoryLevel1Page() {
         type: 'success',
         message: `Đã cập nhật danh mục "${updated.name}".`,
       });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Không thể cập nhật danh mục cấp 1.';
+    } catch (err: any) {
+      let message = 'Khong the xoa muc da chon.';
+      if (err instanceof globalThis.Error) message = err.message;
       setError(message);
       showToast({
         type: 'error',
@@ -209,8 +212,9 @@ export function AdminCategoryLevel1Page() {
         type: 'success',
         message: `Đã xóa danh mục "${deleted.name || deleteState.name}".`,
       });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Không thể xóa danh mục cấp 1.';
+    } catch (err: any) {
+      let message = 'Khong the xoa muc da chon.';
+      if (err instanceof globalThis.Error) message = err.message;
       setError(message);
       showToast({
         type: 'error',
@@ -249,8 +253,9 @@ export function AdminCategoryLevel1Page() {
         type: 'success',
         message: `${isVisible ? 'Đã hiển thị' : 'Đã ẩn'} ${selectedItems.length} danh mục cấp 1.`,
       });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Không thể cập nhật trạng thái hiển thị.';
+    } catch (err: any) {
+      let message = 'Khong the xoa muc da chon.';
+      if (err instanceof globalThis.Error) message = err.message;
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -260,6 +265,8 @@ export function AdminCategoryLevel1Page() {
 
   const handleBulkDelete = async () => {
     if (!selectedItems.length) return;
+    setBulkDeleteCount(selectedItems.length);
+    return;
 
     try {
       setIsSaving(true);
@@ -271,8 +278,33 @@ export function AdminCategoryLevel1Page() {
         type: 'success',
         message: `Đã xóa ${selectedItems.length} danh mục cấp 1.`,
       });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Không thể xóa danh mục cấp 1 đã chọn.';
+    } catch (err: any) {
+      let message = 'Khong the xoa muc da chon.';
+      if (err instanceof globalThis.Error) message = err.message;
+      setError(message);
+      showToast({ type: 'error', message });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    if (!selectedItems.length) return;
+
+    try {
+      setIsSaving(true);
+      setError('');
+      await Promise.all(selectedItems.map((item) => deleteAdminVehicleCategoryLevel1(item.id)));
+      setSelectedIds([]);
+      await loadItems();
+      setBulkDeleteCount(0);
+      showToast({
+        type: 'success',
+        message: `Da xoa ${selectedItems.length} danh muc cap 1.`,
+      });
+    } catch (err: any) {
+      let message = 'Khong the xoa danh muc cap 1 da chon.';
+      if (err instanceof globalThis.Error) message = err.message;
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -493,6 +525,22 @@ export function AdminCategoryLevel1Page() {
           </div>
         </div>
       ) : null}
+
+      <AdminConfirmModal
+        open={bulkDeleteCount > 0}
+        title={`Xóa ${bulkDeleteCount} danh mục cấp 1?`}
+        description="Hành động này sẽ xóa các danh mục cấp 1 đã chọn khỏi hệ thống quản trị."
+        confirmLabel={isSaving ? 'Đang xóa...' : 'Xóa các danh mục'}
+        busy={isSaving}
+        onCancel={() => {
+          if (isSaving) return;
+          setBulkDeleteCount(0);
+        }}
+        onConfirm={() => void handleConfirmBulkDelete()}
+      />
     </>
   );
 }
+
+
+

@@ -8,6 +8,7 @@ import {
   type AdminSiteSetting,
   type AdminSiteSettingPayload,
 } from '../../api/adminApi';
+import { AdminConfirmModal } from '../../components/AdminConfirmModal';
 import { AdminShowroomModal, type ShowroomItem } from './AdminShowroomModal';
 
 type ModalState =
@@ -16,6 +17,8 @@ type ModalState =
       item: ShowroomItem | null;
     }
   | null;
+
+type DeleteState = ShowroomItem | null;
 
 function parseShowrooms(value: string) {
   return value
@@ -91,6 +94,7 @@ export function AdminShowroomPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const [modalState, setModalState] = useState<ModalState>(null);
+  const [deleteState, setDeleteState] = useState<DeleteState>(null);
 
   const showrooms = useMemo(() => parseShowrooms(setting?.diachi || ''), [setting?.diachi]);
 
@@ -223,7 +227,7 @@ export function AdminShowroomPage() {
                           type="button"
                           variant="outline"
                           size="icon-sm"
-                          onClick={() => void handleDeleteShowroom(item.id)}
+                          onClick={() => setDeleteState(item)}
                           disabled={isSaving}
                           className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
                         >
@@ -249,6 +253,22 @@ export function AdminShowroomPage() {
           setModalState(null);
         }}
         onSave={(payload) => void handleSaveShowroom(payload)}
+      />
+
+      <AdminConfirmModal
+        open={Boolean(deleteState)}
+        title={deleteState ? `Xóa showroom "${deleteState.office}"?` : 'Xóa showroom?'}
+        description="Hành động này sẽ xóa showroom khỏi danh sách hiển thị ở footer."
+        confirmLabel={isSaving ? 'Đang xóa...' : 'Xóa showroom'}
+        busy={isSaving}
+        onCancel={() => {
+          if (isSaving) return;
+          setDeleteState(null);
+        }}
+        onConfirm={() => {
+          if (!deleteState) return;
+          void handleDeleteShowroom(deleteState.id).then(() => setDeleteState(null));
+        }}
       />
     </>
   );

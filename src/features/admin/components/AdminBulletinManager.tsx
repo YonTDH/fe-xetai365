@@ -15,6 +15,7 @@ import {
   type AdminBulletinType,
 } from '../api/adminApi';
 import { AdminDataTable, type AdminTableColumn } from './AdminDataTable';
+import { AdminConfirmModal } from './AdminConfirmModal';
 import { AdminTableFilters } from './AdminTableFilters';
 import { AdminBulletinModal } from './AdminBulletinModal';
 
@@ -126,6 +127,7 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [modalState, setModalState] = useState<ModalState>(null);
   const [deleteState, setDeleteState] = useState<DeleteState>(null);
+  const [bulkDeleteCount, setBulkDeleteCount] = useState(0);
   const [keyword, setKeyword] = useState('');
   const [visibilityFilter, setVisibilityFilter] = useState<'all' | 'visible' | 'hidden'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | AdminBulletinStatus>('all');
@@ -136,7 +138,7 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
       setError('');
       const data = await listAdminBulletins(type);
       setItems(data);
-    } catch (err) {
+    } catch (err: any) {
       setItems([]);
       setError(err instanceof Error ? err.message : 'Không thể tải danh sách bài viết.');
     } finally {
@@ -205,8 +207,9 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
       setError('');
       const detail = await getAdminBulletinDetail(id);
       setModalState({ mode, item: detail });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Không thể tải chi tiết bài viết.';
+    } catch (err: any) {
+      let message = 'Khong the xoa muc da chon.';
+      if (err instanceof globalThis.Error) message = err.message;
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -244,8 +247,9 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
 
       setModalState(null);
       await loadItems();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Không thể lưu bài viết.';
+    } catch (err: any) {
+      let message = 'Khong the xoa muc da chon.';
+      if (err instanceof globalThis.Error) message = err.message;
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -268,8 +272,9 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
       setDeleteState(null);
       await loadItems();
       showToast({ type: 'success', message: 'Đã xóa bài viết.' });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Không thể xóa bài viết.';
+    } catch (err: any) {
+      let message = 'Khong the xoa muc da chon.';
+      if (err instanceof globalThis.Error) message = err.message;
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -299,8 +304,9 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
         type: 'success',
         message: `${isVisible ? 'Đã hiển thị' : 'Đã ẩn'} ${selectedItems.length} bài viết.`,
       });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Không thể cập nhật trạng thái hiển thị.';
+    } catch (err: any) {
+      let message = 'Khong the xoa muc da chon.';
+      if (err instanceof globalThis.Error) message = err.message;
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -310,6 +316,8 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
 
   const handleBulkDelete = async () => {
     if (!selectedItems.length) return;
+    setBulkDeleteCount(selectedItems.length);
+    return;
 
     try {
       setIsSaving(true);
@@ -318,8 +326,30 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
       setSelectedIds([]);
       await loadItems();
       showToast({ type: 'success', message: `Đã xóa ${selectedItems.length} bài viết.` });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Không thể xóa bài viết đã chọn.';
+    } catch (err: any) {
+      let message = 'Khong the xoa muc da chon.';
+      if (err instanceof globalThis.Error) message = err.message;
+      setError(message);
+      showToast({ type: 'error', message });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    if (!selectedItems.length) return;
+
+    try {
+      setIsSaving(true);
+      setError('');
+      await Promise.all(selectedItems.map((item) => deleteAdminBulletin(item.id)));
+      setSelectedIds([]);
+      await loadItems();
+      setBulkDeleteCount(0);
+      showToast({ type: 'success', message: `Da xoa ${selectedItems.length} bai viet.` });
+    } catch (err: any) {
+      let message = 'Khong the xoa bai viet da chon.';
+      if (err instanceof globalThis.Error) message = err.message;
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -559,6 +589,22 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
           </div>
         </div>
       ) : null}
+
+      <AdminConfirmModal
+        open={bulkDeleteCount > 0}
+        title={`Xóa ${bulkDeleteCount} bài viết?`}
+        description="Hành động này sẽ xóa vĩnh viễn các bài viết đã chọn khỏi hệ thống quản trị."
+        confirmLabel={isSaving ? 'Đang xóa...' : 'Xóa các bài viết'}
+        busy={isSaving}
+        onCancel={() => {
+          if (isSaving) return;
+          setBulkDeleteCount(0);
+        }}
+        onConfirm={() => void handleConfirmBulkDelete()}
+      />
     </>
   );
 }
+
+
+
