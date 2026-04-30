@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { formatCurrencyVnd } from '@/lib/formatCurrencyVnd';
 import { sanitizeHtml } from '@/lib/sanitizeHtml';
 import { AdminConfirmModal } from '../../components/AdminConfirmModal';
 import {
@@ -358,7 +359,14 @@ export function ProductModal({
                 <Input value={form.productCode} onChange={(event) => handleChange('productCode', event.target.value)} readOnly={isReadOnly || isSaving} />
               </Field>
               <Field label="Giá">
-                <Input value={form.priceVnd} onChange={(event) => handleChange('priceVnd', event.target.value)} readOnly={isReadOnly || isSaving} />
+                <div className="space-y-2">
+                  <Input
+                    value={isReadOnly ? formatCurrencyVnd(form.priceVnd) : form.priceVnd}
+                    onChange={(event) => handleChange('priceVnd', event.target.value)}
+                    readOnly={isReadOnly || isSaving}
+                  />
+                  {!isReadOnly ? <div className="text-xs text-slate-500">{formatCurrencyVnd(form.priceVnd)}</div> : null}
+                </div>
               </Field>
               <Field label="Trạng thái">
                 <Input
@@ -577,7 +585,7 @@ export function ProductModal({
                       <span>{form.location || 'Chưa có vị trí'}</span>
                     </div>
                   </div>
-                  <div className="text-2xl font-bold text-[#135a91]">{form.priceVnd || '0'}</div>
+                  <div className="text-2xl font-bold text-[#135a91]">{formatCurrencyVnd(form.priceVnd)}</div>
                   <p className="whitespace-pre-line text-base leading-7 text-slate-700">
                     {form.shortDescription || 'Mô tả ngắn sẽ hiển thị ở đây.'}
                   </p>

@@ -3,6 +3,7 @@ import { CheckCircle2, Circle, Eye, Pencil, Plus, RefreshCw, Trash2 } from 'luci
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAppToast } from '@/components/ui/toast';
+import { formatCurrencyVnd } from '@/lib/formatCurrencyVnd';
 import {
   createAdminProduct,
   deleteAdminProduct,
@@ -63,7 +64,7 @@ function mapProductToRow(item: AdminProduct): ProductRow {
     title: item.title,
     categoryName: `${item.categoryLevel1Name} / ${item.categoryLevel2Name}`,
     brand: item.brand,
-    priceVnd: item.priceVnd,
+    priceVnd: formatCurrencyVnd(item.priceVnd),
     isVisible: item.isVisible,
     status: translateProductStatus(item.status),
   };
