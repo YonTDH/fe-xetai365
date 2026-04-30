@@ -5,15 +5,22 @@ import { Input } from '@/components/ui/input';
 import { AdminConfirmModal } from '../../components/AdminConfirmModal';
 import type { AdminVehicleCategory } from '../../api/adminApi';
 
+type CategoryLevel2ModalSavePayload = Pick<
+  AdminVehicleCategory,
+  'parentId' | 'name' | 'slug' | 'isVisible' | 'description' | 'sortOrder'
+> & {
+  id?: number;
+};
+
 type CategoryLevel2ModalProps = {
   item: AdminVehicleCategory | null;
   parentOptions: AdminVehicleCategory[];
-  mode: 'view' | 'edit';
+  mode: 'view' | 'edit' | 'create';
   open: boolean;
   isSaving?: boolean;
   onClose: () => void;
   onEdit?: () => void;
-  onSave: (nextItem: Pick<AdminVehicleCategory, 'id' | 'parentId' | 'name' | 'slug' | 'isVisible' | 'description' | 'sortOrder'>) => void;
+  onSave: (nextItem: CategoryLevel2ModalSavePayload) => void;
 };
 
 type FormState = {
@@ -23,9 +30,9 @@ type FormState = {
   isVisible: boolean;
 };
 
-function createFormState(item: AdminVehicleCategory | null): FormState {
+function createFormState(item: AdminVehicleCategory | null, parentOptions: AdminVehicleCategory[]): FormState {
   return {
-    parentId: item?.parentId || 0,
+    parentId: item?.parentId || parentOptions[0]?.id || 0,
     name: item?.name ?? '',
     slug: item?.slug ?? '',
     isVisible: item?.isVisible ?? true,
@@ -61,22 +68,22 @@ export function CategoryLevel2Modal({
   onEdit,
   onSave,
 }: CategoryLevel2ModalProps) {
-  const [form, setForm] = useState<FormState>(createFormState(item));
-  const [initialSnapshot, setInitialSnapshot] = useState(() => JSON.stringify(createFormState(item)));
+  const [form, setForm] = useState<FormState>(createFormState(item, parentOptions));
+  const [initialSnapshot, setInitialSnapshot] = useState(() => JSON.stringify(createFormState(item, parentOptions)));
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
-    const nextForm = createFormState(item);
+    const nextForm = createFormState(item, parentOptions);
     setForm(nextForm);
     setInitialSnapshot(JSON.stringify(nextForm));
     setConfirmCloseOpen(false);
-  }, [item, open]);
+  }, [item, open, parentOptions]);
 
   const requestClose = () => {
     if (isSaving) return;
-    if (mode === 'edit' && JSON.stringify(form) !== initialSnapshot) {
+    if ((mode === 'edit' || mode === 'create') && JSON.stringify(form) !== initialSnapshot) {
       setConfirmCloseOpen(true);
       return;
     }
@@ -92,11 +99,13 @@ export function CategoryLevel2Modal({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [form, initialSnapshot, isSaving, mode, onClose, open]);
+  }, [form, initialSnapshot, isSaving, mode, open]);
 
-  if (!open || !item) return null;
+  if (!open) return null;
 
   const isReadOnly = mode === 'view';
+  const headingName = item?.name || form.name.trim() || 'Danh mục cấp 2 mới';
+  const headingSlug = item?.slug || form.slug.trim() || 'Tự động tạo từ tên danh mục';
 
   const handleChange = <TKey extends keyof FormState>(key: TKey, value: FormState[TKey]) => {
     setForm((prev) => {
@@ -120,13 +129,13 @@ export function CategoryLevel2Modal({
     }
 
     onSave({
-      id: item.id,
-      parentId: form.parentId || item.parentId,
-      name: form.name.trim() || item.name,
-      slug: form.slug.trim() || item.slug,
+      id: item?.id,
+      parentId: form.parentId || item?.parentId || parentOptions[0]?.id || 0,
+      name: form.name.trim() || item?.name || '',
+      slug: form.slug.trim() || item?.slug || '',
       isVisible: form.isVisible,
-      description: item.description,
-      sortOrder: item.sortOrder,
+      description: item?.description || '',
+      sortOrder: item?.sortOrder || 1,
     });
   };
 
@@ -146,10 +155,10 @@ export function CategoryLevel2Modal({
         <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
           <div className="space-y-1">
             <div className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700">
-              {isReadOnly ? 'Xem danh mục cấp 2' : 'Cập nhật danh mục cấp 2'}
+              {mode === 'create' ? 'Thêm danh mục cấp 2' : isReadOnly ? 'Xem danh mục cấp 2' : 'Cập nhật danh mục cấp 2'}
             </div>
-            <h2 className="text-2xl font-black text-slate-950">{item.name}</h2>
-            <p className="text-sm text-slate-500">Slug: {item.slug}</p>
+            <h2 className="text-2xl font-black text-slate-950">{headingName}</h2>
+            <p className="text-sm text-slate-500">Slug: {headingSlug}</p>
           </div>
 
           <Button type="button" variant="outline" size="icon-sm" onClick={requestClose} aria-label="Đóng modal" disabled={isSaving}>
@@ -207,8 +216,8 @@ export function CategoryLevel2Modal({
             </Button>
           ) : null}
           {!isReadOnly ? (
-            <Button type="button" onClick={handleSubmit} disabled={isSaving}>
-              {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
+            <Button type="button" onClick={handleSubmit} disabled={isSaving || !parentOptions.length}>
+              {isSaving ? 'Đang lưu...' : mode === 'create' ? 'Tạo danh mục' : 'Lưu thay đổi'}
             </Button>
           ) : null}
         </div>

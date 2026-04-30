@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Circle, Eye, Pencil, RefreshCw, Trash2 } from 'lucide-react';
+import { CheckCircle2, Circle, Eye, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAppToast } from '@/components/ui/toast';
 import {
+  createAdminVehicleCategoryLevel2,
   deleteAdminVehicleCategoryLevel2,
   listAdminVehicleCategoriesTree,
   updateAdminVehicleCategoryLevel2,
@@ -24,8 +25,8 @@ type CategoryLevel2Row = {
 };
 
 type ModalState = {
-  mode: 'view' | 'edit';
-  item: AdminVehicleCategory;
+  mode: 'view' | 'edit' | 'create';
+  item: AdminVehicleCategory | null;
 } | null;
 
 type DeleteState = {
@@ -33,6 +34,13 @@ type DeleteState = {
   name: string;
   parentName: string;
 } | null;
+
+type CategoryLevel2SavePayload = Pick<
+  AdminVehicleCategory,
+  'parentId' | 'name' | 'slug' | 'isVisible' | 'description' | 'sortOrder'
+> & {
+  id?: number;
+};
 
 function flattenLevel2Categories(nodes: AdminVehicleCategory[]) {
   return nodes.flatMap((parent) =>
@@ -149,6 +157,10 @@ export function AdminCategoryLevel2Page() {
     setModalState({ mode, item });
   }, [findLevel2Item]);
 
+  const openCreateModal = useCallback(() => {
+    setModalState({ mode: 'create', item: null });
+  }, []);
+
   const closeModal = () => {
     if (isSaving) return;
     setModalState(null);
@@ -158,12 +170,26 @@ export function AdminCategoryLevel2Page() {
     setModalState((prev) => (prev?.item ? { mode: 'edit', item: prev.item } : prev));
   };
 
-  const handleSaveCategory = async (
-    nextItem: Pick<AdminVehicleCategory, 'id' | 'parentId' | 'name' | 'slug' | 'isVisible' | 'description' | 'sortOrder'>
-  ) => {
+  const handleSaveCategory = async (nextItem: CategoryLevel2SavePayload) => {
     try {
       setIsSaving(true);
       setError('');
+
+      if (modalState?.mode === 'create') {
+        const created = await createAdminVehicleCategoryLevel2(nextItem);
+        setModalState(null);
+        await loadItems();
+        showToast({
+          type: 'success',
+          message: `Đã thêm danh mục cấp 2 "${created.name}".`,
+        });
+        return;
+      }
+
+      if (!nextItem.id) {
+        throw new Error('Thiếu mã danh mục cấp 2.');
+      }
+
       const updated = await updateAdminVehicleCategoryLevel2(nextItem.id, nextItem);
       setModalState(null);
       await loadItems();
@@ -172,8 +198,7 @@ export function AdminCategoryLevel2Page() {
         message: `Đã cập nhật danh mục cấp 2 "${updated.name}".`,
       });
     } catch (err: any) {
-      let message = 'Khong the xoa muc da chon.';
-      if (err instanceof globalThis.Error) message = err.message;
+      const message = err instanceof globalThis.Error ? err.message : 'Không thể lưu danh mục cấp 2.';
       setError(message);
       showToast({
         type: 'error',
@@ -217,8 +242,7 @@ export function AdminCategoryLevel2Page() {
         message: `Đã xóa danh mục cấp 2 "${deleted.name || deleteState.name}".`,
       });
     } catch (err: any) {
-      let message = 'Khong the xoa muc da chon.';
-      if (err instanceof globalThis.Error) message = err.message;
+      const message = err instanceof globalThis.Error ? err.message : 'Không thể xóa mục đã chọn.';
       setError(message);
       showToast({
         type: 'error',
@@ -259,8 +283,7 @@ export function AdminCategoryLevel2Page() {
         message: `${isVisible ? 'Đã hiển thị' : 'Đã ẩn'} ${selectedItems.length} danh mục cấp 2.`,
       });
     } catch (err: any) {
-      let message = 'Khong the xoa muc da chon.';
-      if (err instanceof globalThis.Error) message = err.message;
+      const message = err instanceof globalThis.Error ? err.message : 'Không thể cập nhật hiển thị.';
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -271,26 +294,6 @@ export function AdminCategoryLevel2Page() {
   const handleBulkDelete = async () => {
     if (!selectedItems.length) return;
     setBulkDeleteCount(selectedItems.length);
-    return;
-
-    try {
-      setIsSaving(true);
-      setError('');
-      await Promise.all(selectedItems.map((item) => deleteAdminVehicleCategoryLevel2(item.id)));
-      setSelectedIds([]);
-      await loadItems();
-      showToast({
-        type: 'success',
-        message: `Đã xóa ${selectedItems.length} danh mục cấp 2.`,
-      });
-    } catch (err: any) {
-      let message = 'Khong the xoa muc da chon.';
-      if (err instanceof globalThis.Error) message = err.message;
-      setError(message);
-      showToast({ type: 'error', message });
-    } finally {
-      setIsSaving(false);
-    }
   };
 
   const handleConfirmBulkDelete = async () => {
@@ -305,11 +308,10 @@ export function AdminCategoryLevel2Page() {
       setBulkDeleteCount(0);
       showToast({
         type: 'success',
-        message: `Da xoa ${selectedItems.length} danh muc cap 2.`,
+        message: `Đã xóa ${selectedItems.length} danh mục cấp 2.`,
       });
     } catch (err: any) {
-      let message = 'Khong the xoa danh muc cap 2 da chon.';
-      if (err instanceof globalThis.Error) message = err.message;
+      const message = err instanceof globalThis.Error ? err.message : 'Không thể xóa danh mục cấp 2 đã chọn.';
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -498,6 +500,15 @@ export function AdminCategoryLevel2Page() {
                   </Button>
                 </>
               ) : null}
+              <Button
+                type="button"
+                onClick={openCreateModal}
+                disabled={isLoading || isSaving || isDeletingId !== null || !items.length}
+                className="bg-[#135a91] text-white hover:bg-[#0f4b78]"
+              >
+                <Plus className="h-4 w-4" />
+                Thêm danh mục
+              </Button>
               <Button type="button" onClick={() => void loadItems()} disabled={isLoading || isSaving || isDeletingId !== null} className="bg-[#135a91] text-white hover:bg-[#0f4b78]">
                 <RefreshCw className={['h-4 w-4', isLoading ? 'animate-spin' : ''].join(' ')} />
                 {isLoading ? 'Đang tải...' : 'Tải lại'}
@@ -562,6 +573,3 @@ export function AdminCategoryLevel2Page() {
     </>
   );
 }
-
-
-

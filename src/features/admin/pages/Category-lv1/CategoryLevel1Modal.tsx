@@ -5,14 +5,21 @@ import { Input } from '@/components/ui/input';
 import { AdminConfirmModal } from '../../components/AdminConfirmModal';
 import type { AdminVehicleCategory } from '../../api/adminApi';
 
+type CategoryLevel1ModalSavePayload = Pick<
+  AdminVehicleCategory,
+  'name' | 'slug' | 'isVisible' | 'description' | 'sortOrder'
+> & {
+  id?: number;
+};
+
 type CategoryLevel1ModalProps = {
   item: AdminVehicleCategory | null;
-  mode: 'view' | 'edit';
+  mode: 'view' | 'edit' | 'create';
   open: boolean;
   isSaving?: boolean;
   onClose: () => void;
   onEdit?: () => void;
-  onSave: (nextItem: Pick<AdminVehicleCategory, 'id' | 'name' | 'slug' | 'isVisible' | 'description' | 'sortOrder'>) => void;
+  onSave: (nextItem: CategoryLevel1ModalSavePayload) => void;
 };
 
 type FormState = {
@@ -72,7 +79,7 @@ export function CategoryLevel1Modal({
 
   const requestClose = () => {
     if (isSaving) return;
-    if (mode === 'edit' && JSON.stringify(form) !== initialSnapshot) {
+    if ((mode === 'edit' || mode === 'create') && JSON.stringify(form) !== initialSnapshot) {
       setConfirmCloseOpen(true);
       return;
     }
@@ -88,11 +95,13 @@ export function CategoryLevel1Modal({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [form, initialSnapshot, isSaving, mode, onClose, open]);
+  }, [form, initialSnapshot, isSaving, mode, open]);
 
-  if (!open || !item) return null;
+  if (!open) return null;
 
   const isReadOnly = mode === 'view';
+  const headingName = item?.name || form.name.trim() || 'Danh mục cấp 1 mới';
+  const childCount = item?.children.length ?? 0;
 
   const handleChange = <TKey extends keyof FormState>(key: TKey, value: FormState[TKey]) => {
     setForm((prev) => {
@@ -116,12 +125,12 @@ export function CategoryLevel1Modal({
     }
 
     onSave({
-      id: item.id,
-      name: form.name.trim() || item.name,
-      slug: form.slug.trim() || item.slug,
+      id: item?.id,
+      name: form.name.trim() || item?.name || '',
+      slug: form.slug.trim() || item?.slug || '',
       isVisible: form.isVisible,
-      description: item.description,
-      sortOrder: item.sortOrder,
+      description: item?.description || '',
+      sortOrder: item?.sortOrder || 1,
     });
   };
 
@@ -141,10 +150,10 @@ export function CategoryLevel1Modal({
         <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
           <div className="space-y-1">
             <div className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700">
-              {isReadOnly ? 'Xem danh mục cấp 1' : 'Cập nhật danh mục cấp 1'}
+              {mode === 'create' ? 'Thêm danh mục cấp 1' : isReadOnly ? 'Xem danh mục cấp 1' : 'Cập nhật danh mục cấp 1'}
             </div>
-            <h2 className="text-2xl font-black text-slate-950">{item.name}</h2>
-            <p className="text-sm text-slate-500">{item.children.length} danh mục cấp 2</p>
+            <h2 className="text-2xl font-black text-slate-950">{headingName}</h2>
+            <p className="text-sm text-slate-500">{childCount} danh mục cấp 2</p>
           </div>
 
           <Button type="button" variant="outline" size="icon-sm" onClick={requestClose} aria-label="Đóng modal" disabled={isSaving}>
@@ -175,22 +184,24 @@ export function CategoryLevel1Modal({
           </Field>
 
           <Field label="Số danh mục cấp 2">
-            <div className="flex h-10 items-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700">{item.children.length}</div>
+            <div className="flex h-10 items-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700">{childCount}</div>
           </Field>
 
           <div className="md:col-span-2">
             <Field label="Danh mục cấp 2 hiện có">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                {item.children.length ? (
+                {childCount ? (
                   <div className="flex flex-wrap gap-2">
-                    {item.children.map((child) => (
+                    {(item?.children || []).map((child) => (
                       <span key={child.id} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-sm text-slate-700">
                         {child.name}
                       </span>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-sm text-slate-500">Chưa có danh mục cấp 2.</div>
+                  <div className="text-sm text-slate-500">
+                    {mode === 'create' ? 'Danh mục cấp 2 sẽ thêm sau khi tạo danh mục cấp 1.' : 'Chưa có danh mục cấp 2.'}
+                  </div>
                 )}
               </div>
             </Field>
@@ -208,7 +219,7 @@ export function CategoryLevel1Modal({
           ) : null}
           {!isReadOnly ? (
             <Button type="button" onClick={handleSubmit} disabled={isSaving}>
-              {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
+              {isSaving ? 'Đang lưu...' : mode === 'create' ? 'Tạo danh mục' : 'Lưu thay đổi'}
             </Button>
           ) : null}
         </div>

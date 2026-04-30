@@ -452,6 +452,17 @@ export async function listAdminVehicleCategoriesTree() {
   return (data || []).map(mapAdminVehicleCategory);
 }
 
+export async function createAdminVehicleCategoryLevel1(
+  payload: Pick<AdminVehicleCategory, 'name' | 'slug' | 'isVisible' | 'description' | 'sortOrder'>
+) {
+  const data = (await adminFetch('/api/admin/vehicle-categories/level-1', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })) as Record<string, unknown>;
+
+  return mapAdminVehicleCategory(data);
+}
+
 export async function updateAdminVehicleCategoryLevel1(
   id: number,
   payload: Pick<AdminVehicleCategory, 'name' | 'slug' | 'isVisible' | 'description' | 'sortOrder'>
@@ -476,6 +487,17 @@ export async function deleteAdminVehicleCategoryLevel1(id: number) {
     id: toSafeNumber(data.id),
     name: toSafeString(data.name),
   };
+}
+
+export async function createAdminVehicleCategoryLevel2(
+  payload: Pick<AdminVehicleCategory, 'parentId' | 'name' | 'slug' | 'isVisible' | 'description' | 'sortOrder'>
+) {
+  const data = (await adminFetch('/api/admin/vehicle-categories/level-2', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })) as Record<string, unknown>;
+
+  return mapAdminVehicleCategory(data);
 }
 
 export async function updateAdminVehicleCategoryLevel2(
