@@ -88,7 +88,7 @@ export function MainLayout() {
             <button
               id="hamburger-menu-btn"
               aria-label="Mở menu"
-              aria-expanded={drawerOpen ? 'true' : 'false'}
+              aria-expanded={drawerOpen}
               onClick={() => setDrawerOpen(true)}
               className="rounded-md p-2 text-slate-700 transition-colors hover:bg-slate-100 active:bg-slate-300"
             >
@@ -103,7 +103,7 @@ export function MainLayout() {
           'fixed inset-0 z-[60] transition-opacity duration-300 lg:hidden',
           drawerOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
         ].join(' ')}
-        aria-hidden={drawerOpen ? 'false' : 'true'}
+        aria-hidden={!drawerOpen}
       >
         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setDrawerOpen(false)} />
 

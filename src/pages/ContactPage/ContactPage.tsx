@@ -164,7 +164,7 @@ export function ContactPage() {
                       value={form.fullName}
                       onChange={(e) => setField('fullName', e.target.value)}
                       placeholder="Nhập họ và tên"
-                      aria-invalid={errors.fullName ? 'true' : 'false'}
+                      aria-invalid={Boolean(errors.fullName)}
                     />
                     {errors.fullName && <p className="text-xs text-red-600">{errors.fullName}</p>}
                   </div>
@@ -178,7 +178,7 @@ export function ContactPage() {
                       value={form.phone}
                       onChange={(e) => setField('phone', e.target.value)}
                       placeholder="Nhập số điện thoại"
-                      aria-invalid={errors.phone ? 'true' : 'false'}
+                      aria-invalid={Boolean(errors.phone)}
                     />
                     {errors.phone && <p className="text-xs text-red-600">{errors.phone}</p>}
                   </div>
@@ -195,7 +195,7 @@ export function ContactPage() {
                       value={form.email}
                       onChange={(e) => setField('email', e.target.value)}
                       placeholder="example@email.com"
-                      aria-invalid={errors.email ? 'true' : 'false'}
+                      aria-invalid={Boolean(errors.email)}
                     />
                     {errors.email && <p className="text-xs text-red-600">{errors.email}</p>}
                   </div>
@@ -211,7 +211,7 @@ export function ContactPage() {
                       aria-label="Chọn xe cần tư vấn"
                       title="Chọn xe cần tư vấn"
                       className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm text-slate-800 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                      aria-invalid={errors.vehicleId ? 'true' : 'false'}
+                      aria-invalid={Boolean(errors.vehicleId)}
                       disabled={isLoadingVehicles}
                     >
                       <option value="">{isLoadingVehicles ? 'Đang tải danh sách xe...' : 'Chọn xe'}</option>
@@ -237,7 +237,7 @@ export function ContactPage() {
                     placeholder="Nhập nội dung cần tư vấn..."
                     rows={5}
                     className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm text-slate-800 outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                    aria-invalid={errors.message ? 'true' : 'false'}
+                    aria-invalid={Boolean(errors.message)}
                   />
                   {errors.message && <p className="text-xs text-red-600">{errors.message}</p>}
                 </div>

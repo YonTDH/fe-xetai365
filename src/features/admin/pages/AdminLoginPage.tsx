@@ -9,8 +9,8 @@ import { DEFAULT_ADMIN_SECTION, getAdminSectionPath } from '../config/menu';
 
 export function AdminLoginPage() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -86,11 +86,16 @@ export function AdminLoginPage() {
           {loginError && <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{loginError}</div>}
           <label className="block space-y-2">
             <span className="text-sm font-semibold text-slate-900">Username</span>
-            <Input value={username} onChange={(e) => setUsername(e.target.value)} />
+            <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Nhập username" />
           </label>
           <label className="block space-y-2">
             <span className="text-sm font-semibold text-slate-900">Password</span>
-            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <Input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Nhập password"
+            />
           </label>
           <Button type="button" className="w-full" onClick={() => void handleLogin()} disabled={isLoggingIn}>
             Đăng nhập
