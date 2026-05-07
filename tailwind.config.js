@@ -34,7 +34,7 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sans: ['Geist Variable', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
         sm: '4px',

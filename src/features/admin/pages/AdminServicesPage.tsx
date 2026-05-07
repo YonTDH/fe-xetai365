@@ -4,7 +4,7 @@ export function AdminServicesPage() {
   return (
     <AdminBulletinManager
       type="services"
-      heading="dịch vụ"
+      heading="Dịch vụ"
       description="Quản lý các bài viết dịch vụ hiển thị trên website."
     />
   );

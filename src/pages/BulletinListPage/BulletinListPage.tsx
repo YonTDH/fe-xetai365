@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import topProductImg from '@/assets/lading-page/top-product.png';
+import { PublicSectionHeading } from '@/components/PublicSectionHeading';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { getCategoryDisplayName, listCatalogCategoriesTree, type CategoryNode } from '@/api/landingApi';
@@ -86,12 +87,7 @@ export function BulletinListPage({
   return (
     <section className="min-h-screen bg-slate-50 py-8 md:py-12">
       <div className="container mx-auto px-4">
-        <div className="mb-8 flex border-b-2 border-[#FFD600]">
-          <h1 className="relative -mb-0.5 bg-[#FFD600] px-5 py-2 pr-11 text-base font-bold uppercase text-black md:px-6 md:py-3 md:pr-12 md:text-lg">
-            {title}
-            <span className="absolute right-0 top-0 h-0 w-0 border-b-[20px] border-l-[14px] border-t-[20px] border-b-transparent border-l-[#FFD600] border-t-transparent md:border-b-[24px] md:border-l-[16px] md:border-t-[24px]" />
-          </h1>
-        </div>
+        <PublicSectionHeading title={title} />
 
         <div className="grid gap-6 xl:grid-cols-[220px_minmax(0,1fr)_280px]">
           <aside className="space-y-3">
@@ -110,7 +106,7 @@ export function BulletinListPage({
                       className={[
                         'block rounded-lg border px-4 py-3 text-sm font-bold uppercase transition-colors',
                         isActive
-                          ? 'border-[#FFD600] bg-[#FFD600] text-black'
+                          ? 'border-amber-400 bg-amber-400 text-slate-950'
                           : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-white',
                       ].join(' ')}
                     >

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { PublicSectionHeading } from '@/components/PublicSectionHeading';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getBulletinDetail, type BulletinItem } from '@/api/bulletinsApi';
@@ -49,12 +50,7 @@ export function NewsDetailPage() {
   return (
     <section className="bg-slate-50 py-8 md:py-12">
       <div className="container mx-auto px-4">
-        <div className="mb-8 flex border-b-2 border-[#FFD600]">
-          <h1 className="relative -mb-0.5 bg-[#FFD600] px-5 py-2 pr-11 text-base font-bold uppercase text-black md:px-6 md:py-3 md:pr-12 md:text-lg">
-            Thông tin - Sự kiện
-            <span className="absolute right-0 top-0 h-0 w-0 border-b-[20px] border-l-[14px] border-t-[20px] border-b-transparent border-l-[#FFD600] border-t-transparent md:border-b-[24px] md:border-l-[16px] md:border-t-[24px]" />
-          </h1>
-        </div>
+        <PublicSectionHeading title="Thông tin - sự kiện" />
 
         {isLoading && <p className="text-sm text-slate-600">Đang tải chi tiết bài viết...</p>}
 

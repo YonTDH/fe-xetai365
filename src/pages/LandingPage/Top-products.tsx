@@ -1,4 +1,5 @@
 import topProductImg from '@/assets/lading-page/top-product.png';
+import { PublicSectionHeading } from '@/components/PublicSectionHeading';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRef } from 'react';
 import { Link } from 'react-router-dom';
@@ -19,7 +20,7 @@ export function FeaturesSection({ products, hotline }: FeaturesSectionProps) {
       const scrollAmount = scrollRef.current.clientWidth * 0.8;
       scrollRef.current.scrollBy({
         left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth'
+        behavior: 'smooth',
       });
     }
   };
@@ -27,18 +28,7 @@ export function FeaturesSection({ products, hotline }: FeaturesSectionProps) {
   return (
     <section className="bg-white py-12">
       <div className="container mx-auto px-4">
-        <div className="mb-8 flex border-b-2 border-[#FFD600]">
-          <div
-            className="relative bg-[#FFD600] px-6 py-2 text-sm font-bold uppercase text-black md:py-3 md:text-lg"
-            style={{
-              clipPath: 'polygon(0 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 0 100%)',
-              paddingRight: '36px',
-              marginBottom: '-2px'
-            }}
-          >
-            Sản phẩm nổi bật
-          </div>
-        </div>
+        <PublicSectionHeading title="Sản phẩm nổi bật" />
 
         <div className="group relative">
           <button

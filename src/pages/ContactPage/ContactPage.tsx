@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { PublicSectionHeading } from '@/components/PublicSectionHeading';
 import { createContactRequest } from '@/api/contactRequestsApi';
 import { getPublicSiteSetting, type PublicSiteSetting } from '@/api/landingApi';
 import { listVehicleOptions, type VehicleOption } from '@/api/vehiclesApi';
@@ -138,12 +139,7 @@ export function ContactPage() {
   return (
     <section className="bg-slate-50 py-8 md:py-12">
       <div className="container mx-auto px-4">
-        <div className="mb-8 flex border-b-2 border-[#FFD600]">
-          <h1 className="relative -mb-0.5 bg-[#FFD600] px-5 py-2 pr-11 text-base font-bold uppercase text-black md:px-6 md:py-3 md:pr-12 md:text-lg">
-            Liên hệ
-            <span className="absolute right-0 top-0 h-0 w-0 border-b-[20px] border-l-[14px] border-t-[20px] border-b-transparent border-l-[#FFD600] border-t-transparent md:border-b-[24px] md:border-l-[16px] md:border-t-[24px]" />
-          </h1>
-        </div>
+        <PublicSectionHeading title="Liên hệ" />
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <Card className="border border-slate-300 bg-white shadow-card lg:col-span-2">
@@ -243,16 +239,10 @@ export function ContactPage() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Button
-                    type="submit"
-                    className="bg-primary-600 text-white hover:bg-primary-700"
-                    disabled={isSubmitting}
-                  >
+                  <Button type="submit" className="bg-primary-600 text-white hover:bg-primary-700" disabled={isSubmitting}>
                     {isSubmitting ? 'Đang gửi...' : 'Gửi liên hệ'}
                   </Button>
-                  {isSubmitted && (
-                    <p className="text-sm font-medium text-accent-green">Đã gửi thông tin thành công.</p>
-                  )}
+                  {isSubmitted && <p className="text-sm font-medium text-accent-green">Đã gửi thông tin thành công.</p>}
                   {submitError && <p className="text-sm font-medium text-red-600">{submitError}</p>}
                 </div>
               </form>
