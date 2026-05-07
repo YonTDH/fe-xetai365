@@ -9,6 +9,22 @@ export type AdminUser = {
   status: string;
 };
 
+export type AdminContactRequestStatus = 'new' | 'contacted' | 'closed';
+
+export type AdminContactRequest = {
+  id: number;
+  fullName: string;
+  email: string;
+  phone: string;
+  content: string;
+  vehicleId: number | null;
+  status: AdminContactRequestStatus;
+  isViewed: boolean;
+  contactedAt: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
 export type AdminBulletinType = 'news_event' | 'promotion' | 'recruitment' | 'services';
 export type AdminBulletinStatus = 'draft' | 'published' | 'archived';
 
@@ -325,6 +341,22 @@ function mapAdminSiteSetting(item: Record<string, unknown> | null | undefined): 
   };
 }
 
+function mapAdminContactRequest(item: Record<string, unknown>): AdminContactRequest {
+  return {
+    id: toSafeNumber(item.id),
+    fullName: toSafeString(item.fullName || item.full_name),
+    email: toSafeString(item.email),
+    phone: toSafeString(item.phone),
+    content: toSafeString(item.content),
+    vehicleId: item.vehicleId == null && item.vehicle_id == null ? null : toSafeNumber(item.vehicleId ?? item.vehicle_id),
+    status: (toSafeString(item.status) || 'new') as AdminContactRequestStatus,
+    isViewed: toSafeBoolean(item.isViewed ?? item.is_viewed, true),
+    contactedAt: toSafeString(item.contactedAt || item.contacted_at) || null,
+    createdAt: toSafeString(item.createdAt || item.created_at) || null,
+    updatedAt: toSafeString(item.updatedAt || item.updated_at) || null,
+  };
+}
+
 async function adminFetch(path: string, init?: RequestInit) {
   const token = getAdminToken();
   const headers = new Headers(init?.headers || {});
@@ -595,6 +627,66 @@ export async function updateAdminSiteSetting(payload: AdminSiteSettingPayload) {
   })) as Record<string, unknown>;
 
   return mapAdminSiteSetting(data);
+}
+
+export async function listAdminContactRequests(status?: AdminContactRequestStatus | 'all') {
+  const query = new URLSearchParams({
+    page: '1',
+    limit: '100',
+  });
+
+  if (status && status !== 'all') {
+    query.set('status', status);
+  }
+
+  const data = (await adminFetch(`/api/contact-requests?${query.toString()}`, {
+    method: 'GET',
+  })) as {
+    items?: Record<string, unknown>[];
+  };
+
+  return (data.items || []).map(mapAdminContactRequest);
+}
+
+export async function getAdminContactRequestsSummary() {
+  const data = (await adminFetch('/api/contact-requests/summary', {
+    method: 'GET',
+  })) as {
+    unviewedCount?: number;
+  };
+
+  return {
+    unviewedCount: toSafeNumber(data.unviewedCount),
+  };
+}
+
+export async function markAdminContactRequestsViewed() {
+  const data = (await adminFetch('/api/contact-requests/mark-viewed', {
+    method: 'PATCH',
+  })) as {
+    updatedCount?: number;
+  };
+
+  return {
+    updatedCount: toSafeNumber(data.updatedCount),
+  };
+}
+
+export async function markAdminContactRequestViewed(id: number) {
+  const data = (await adminFetch(`/api/contact-requests/${id}/viewed`, {
+    method: 'PATCH',
+  })) as Record<string, unknown>;
+
+  return mapAdminContactRequest(data);
+}
+
+export async function updateAdminContactRequestStatus(id: number, status: AdminContactRequestStatus) {
+  const data = (await adminFetch(`/api/contact-requests/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  })) as Record<string, unknown>;
+
+  return mapAdminContactRequest(data);
 }
 
 async function getAdminUploadSignature(folder: AdminUploadFolder) {

@@ -1,6 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import { adminMe, clearAdminToken, getAdminToken, type AdminUser } from '../api/adminApi';
+import {
+  adminMe,
+  clearAdminToken,
+  getAdminContactRequestsSummary,
+  getAdminToken,
+  type AdminUser,
+} from '../api/adminApi';
 import { AdminHeader } from '../components/AdminHeader';
 import { AdminSidebar } from '../components/AdminSidebar';
 import {
@@ -20,6 +26,16 @@ export function AdminDashboardPage() {
   const [openKeys, setOpenKeys] = useState<string[]>(DEFAULT_OPEN_KEYS);
   const [user, setUser] = useState<AdminUser | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [contactRequestUnviewedCount, setContactRequestUnviewedCount] = useState(0);
+
+  const loadContactRequestSummary = useCallback(async () => {
+    try {
+      const summary = await getAdminContactRequestsSummary();
+      setContactRequestUnviewedCount(summary.unviewedCount);
+    } catch {
+      setContactRequestUnviewedCount(0);
+    }
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -34,7 +50,7 @@ export function AdminDashboardPage() {
       }
 
       try {
-        const me = await adminMe();
+        const [me] = await Promise.all([adminMe(), loadContactRequestSummary()]);
         if (!mounted) return;
         setUser(me);
       } catch {
@@ -53,7 +69,7 @@ export function AdminDashboardPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [loadContactRequestSummary]);
 
   const activeSection = getAdminSectionFromSlug(sectionSlug) ?? (sectionSlug ? null : DEFAULT_ADMIN_SECTION);
   const activeMeta = activeSection ? adminSectionMeta[activeSection] : null;
@@ -103,12 +119,13 @@ export function AdminDashboardPage() {
         openKeys={openKeys}
         onToggleGroup={handleToggleGroup}
         onSelectSection={handleSelectSection}
+        contactRequestUnviewedCount={contactRequestUnviewedCount}
       />
 
       <div className="min-h-screen xl:ml-72">
         <main className="p-4 md:p-6 xl:p-6">
           <AdminHeader title={pageTitle} description={activeMeta.description} user={user} onLogout={handleLogout} />
-          <AdminSectionContent section={activeSection} />
+          <AdminSectionContent section={activeSection} onContactRequestsViewed={loadContactRequestSummary} />
         </main>
       </div>
     </section>

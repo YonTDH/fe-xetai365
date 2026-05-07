@@ -7,6 +7,7 @@ import {
   Gift,
   Images,
   Package2,
+  PhoneCall,
   Store,
   Wrench,
 } from 'lucide-react';
@@ -22,6 +23,7 @@ export type AdminSectionKey =
   | 'showroom'
   | 'promotion'
   | 'services'
+  | 'contact-requests'
   | 'favicon'
   | 'ads'
   | 'videos'
@@ -53,6 +55,7 @@ export const adminSectionSlugs: Record<AdminSectionKey, string> = {
   showroom: 'showroom',
   promotion: 'khuyen-mai',
   services: 'dich-vu',
+  'contact-requests': 'yeu-cau-lien-he',
   favicon: 'favicon',
   ads: 'quang-cao',
   videos: 'video',
@@ -60,7 +63,7 @@ export const adminSectionSlugs: Record<AdminSectionKey, string> = {
 };
 
 const adminSectionBySlug = Object.fromEntries(
-  Object.entries(adminSectionSlugs).map(([section, slug]) => [slug, section as AdminSectionKey])
+  Object.entries(adminSectionSlugs).map(([section, slug]) => [slug, section as AdminSectionKey]),
 ) as Record<string, AdminSectionKey>;
 
 export function getAdminSectionPath(section: AdminSectionKey) {
@@ -91,8 +94,9 @@ export const adminMenuItems: AdminMenuItem[] = [
   { key: 'recruitment', label: 'Quản lý tuyển dụng', icon: BriefcaseBusiness, section: 'recruitment' },
   { key: 'company-intro', label: 'Giới thiệu về công ty', icon: Building2, section: 'company-intro' },
   { key: 'showroom', label: 'Showroom', icon: Store, section: 'showroom' },
-  { key: 'promotion', label: 'Quản lý khuyến mại', icon: Gift, section: 'promotion' },
+  { key: 'promotion', label: 'Quản lý khuyến mãi', icon: Gift, section: 'promotion' },
   { key: 'services', label: 'Quản lý dịch vụ', icon: Wrench, section: 'services' },
+  { key: 'contact-requests', label: 'Yêu cầu liên hệ', icon: PhoneCall, section: 'contact-requests' },
   {
     key: 'banners',
     label: 'Banner - Quảng cáo',
@@ -155,14 +159,19 @@ export const adminSectionMeta: Record<
     icon: Store,
   },
   promotion: {
-    title: 'Quản lý khuyến mại',
-    description: 'Tạo, sửa, ẩn/hiện bài viết khuyến mại.',
+    title: 'Quản lý khuyến mãi',
+    description: 'Tạo, sửa, ẩn/hiện bài viết khuyến mãi.',
     icon: Gift,
   },
   services: {
     title: 'Quản lý dịch vụ',
     description: 'Khu vực này dành cho nội dung dịch vụ.',
     icon: Wrench,
+  },
+  'contact-requests': {
+    title: 'Yêu cầu liên hệ',
+    description: 'Theo dõi và cập nhật trạng thái các yêu cầu liên hệ từ website.',
+    icon: PhoneCall,
   },
   favicon: {
     title: 'Cập nhật favicon',

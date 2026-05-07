@@ -6,13 +6,42 @@ type AdminSidebarProps = {
   openKeys: string[];
   onToggleGroup: (key: string) => void;
   onSelectSection: (section: AdminSectionKey) => void;
+  contactRequestUnviewedCount?: number;
 };
+
+function MenuBadge({ count }: { count: number }) {
+  if (count <= 0) {
+    return null;
+  }
+
+  return (
+    <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-amber-400/15 px-2 py-0.5 text-[10px] font-semibold text-amber-300 ring-1 ring-amber-300/20">
+      <span>Mới</span>
+      <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-amber-300 px-1 text-[10px] font-bold text-slate-950">
+        {count}
+      </span>
+    </span>
+  );
+}
+
+function MenuIconBadge({ count }: { count: number }) {
+  if (count <= 0) {
+    return null;
+  }
+
+  return (
+    <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-4 text-white shadow-sm">
+      {count > 99 ? '99+' : count}
+    </span>
+  );
+}
 
 export function AdminSidebar({
   activeSection,
   openKeys,
   onToggleGroup,
   onSelectSection,
+  contactRequestUnviewedCount = 0,
 }: AdminSidebarProps) {
   return (
     <aside className="w-full bg-gradient-to-b from-slate-900 via-slate-800 to-sky-950 text-white xl:fixed xl:inset-y-0 xl:left-0 xl:w-72 xl:overflow-hidden">
@@ -35,6 +64,7 @@ export function AdminSidebar({
             const isOpen = openKeys.includes(item.key);
             const isLeafActive = item.section && item.section === activeSection;
             const isGroupActive = item.children?.some((child) => child.section === activeSection);
+            const isContactRequestsItem = item.section === 'contact-requests';
 
             if (item.children?.length) {
               return (
@@ -44,9 +74,7 @@ export function AdminSidebar({
                     onClick={() => onToggleGroup(item.key)}
                     className={[
                       'flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-all',
-                      isGroupActive
-                        ? 'bg-white/12 text-white ring-1 ring-white/15'
-                        : 'text-slate-200 hover:bg-white/8 hover:text-white',
+                      isGroupActive ? 'bg-white/12 text-white ring-1 ring-white/15' : 'text-slate-200 hover:bg-white/8 hover:text-white',
                     ].join(' ')}
                   >
                     <Icon className="h-4 w-4 shrink-0 text-sky-300" />
@@ -67,9 +95,7 @@ export function AdminSidebar({
                             onClick={() => onSelectSection(child.section)}
                             className={[
                               'flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left transition-all',
-                              isActive
-                                ? 'bg-sky-400/15 text-white ring-1 ring-sky-300/20'
-                                : 'text-slate-300 hover:bg-white/6 hover:text-white',
+                              isActive ? 'bg-sky-400/15 text-white ring-1 ring-sky-300/20' : 'text-slate-300 hover:bg-white/6 hover:text-white',
                             ].join(' ')}
                           >
                             <ChildIcon className="h-3 w-3 shrink-0 text-slate-400" />
@@ -91,13 +117,15 @@ export function AdminSidebar({
                 onClick={() => item.section && onSelectSection(item.section)}
                 className={[
                   'flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-all',
-                  isLeafActive
-                    ? 'bg-white/12 text-white ring-1 ring-white/15'
-                    : 'text-slate-200 hover:bg-white/8 hover:text-white',
+                  isLeafActive ? 'bg-white/12 text-white ring-1 ring-white/15' : 'text-slate-200 hover:bg-white/8 hover:text-white',
                 ].join(' ')}
               >
-                <Icon className="h-4 w-4 shrink-0 text-sky-300" />
+                <span className="relative shrink-0">
+                  <Icon className="h-4 w-4 text-sky-300" />
+                  {isContactRequestsItem ? <MenuIconBadge count={contactRequestUnviewedCount} /> : null}
+                </span>
                 <span className="text-[13px] font-medium">{item.label}</span>
+                {isContactRequestsItem ? <MenuBadge count={contactRequestUnviewedCount} /> : null}
                 {item.section ? <span className="sr-only">{getAdminSectionPath(item.section)}</span> : null}
               </button>
             );
