@@ -92,7 +92,6 @@ export const adminMenuItems: AdminMenuItem[] = [
   { key: 'about-us', label: 'Về chúng tôi', icon: BadgeInfo, section: 'about-us' },
   { key: 'news', label: 'Quản lý tin tức', icon: FilePenLine, section: 'news' },
   { key: 'recruitment', label: 'Quản lý tuyển dụng', icon: BriefcaseBusiness, section: 'recruitment' },
-  { key: 'company-intro', label: 'Giới thiệu về công ty', icon: Building2, section: 'company-intro' },
   { key: 'showroom', label: 'Showroom', icon: Store, section: 'showroom' },
   { key: 'promotion', label: 'Quản lý khuyến mãi', icon: Gift, section: 'promotion' },
   { key: 'services', label: 'Quản lý dịch vụ', icon: Wrench, section: 'services' },

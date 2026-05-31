@@ -109,7 +109,7 @@ export function AdminDashboardPage() {
   }
 
   if (activeSection === 'company-intro') {
-    return <Navigate to={getAdminSectionPath('showroom')} replace />;
+    return <Navigate to={getAdminSectionPath('about-us')} replace />;
   }
 
   return (
