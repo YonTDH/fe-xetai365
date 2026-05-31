@@ -30,6 +30,9 @@ type FormState = {
   isVisible: boolean;
 };
 
+type FormErrors = Partial<Record<'parentId' | 'name' | 'slug', string>>;
+type TouchedFields = Partial<Record<'parentId' | 'name' | 'slug', boolean>>;
+
 function createFormState(item: AdminVehicleCategory | null, parentOptions: AdminVehicleCategory[]): FormState {
   return {
     parentId: item?.parentId || parentOptions[0]?.id || 0,
@@ -47,6 +50,27 @@ function slugifyVietnamese(value: string) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .replace(/-{2,}/g, '-');
+}
+
+function validateForm(form: FormState, parentOptions: AdminVehicleCategory[]): FormErrors {
+  const errors: FormErrors = {};
+  const parentExists = parentOptions.some((parent) => parent.id === form.parentId);
+  const name = form.name.trim();
+  const slug = form.slug.trim();
+
+  if (!form.parentId || !parentExists) {
+    errors.parentId = 'Vui lòng chọn danh mục cấp 1.';
+  }
+
+  if (!name) {
+    errors.name = 'Vui lòng nhập tên danh mục.';
+  }
+
+  if (!slug) {
+    errors.slug = 'Tên danh mục cần có chữ hoặc số để tạo slug.';
+  }
+
+  return errors;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -69,6 +93,7 @@ export function CategoryLevel2Modal({
   onSave,
 }: CategoryLevel2ModalProps) {
   const [form, setForm] = useState<FormState>(createFormState(item, parentOptions));
+  const [touched, setTouched] = useState<TouchedFields>({});
   const [initialSnapshot, setInitialSnapshot] = useState(() => JSON.stringify(createFormState(item, parentOptions)));
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -77,6 +102,7 @@ export function CategoryLevel2Modal({
     if (!open) return;
     const nextForm = createFormState(item, parentOptions);
     setForm(nextForm);
+    setTouched({});
     setInitialSnapshot(JSON.stringify(nextForm));
     setConfirmCloseOpen(false);
   }, [item, open, parentOptions]);
@@ -106,6 +132,14 @@ export function CategoryLevel2Modal({
   const isReadOnly = mode === 'view';
   const headingName = item?.name || form.name.trim() || 'Danh mục cấp 2 mới';
   const headingSlug = item?.slug || form.slug.trim() || 'Tự động tạo từ tên danh mục';
+  const errors = validateForm(form, parentOptions);
+  const parentError = touched.parentId ? errors.parentId : undefined;
+  const nameError = touched.name ? errors.name : undefined;
+  const slugError = touched.slug || touched.name ? errors.slug : undefined;
+
+  const markTouched = (key: keyof TouchedFields) => {
+    setTouched((prev) => ({ ...prev, [key]: true }));
+  };
 
   const handleChange = <TKey extends keyof FormState>(key: TKey, value: FormState[TKey]) => {
     setForm((prev) => {
@@ -128,11 +162,17 @@ export function CategoryLevel2Modal({
       return;
     }
 
+    const nextErrors = validateForm(form, parentOptions);
+    if (Object.keys(nextErrors).length > 0) {
+      setTouched({ parentId: true, name: true, slug: true });
+      return;
+    }
+
     onSave({
       id: item?.id,
-      parentId: form.parentId || item?.parentId || parentOptions[0]?.id || 0,
-      name: form.name.trim() || item?.name || '',
-      slug: form.slug.trim() || item?.slug || '',
+      parentId: form.parentId,
+      name: form.name.trim(),
+      slug: form.slug.trim(),
       isVisible: form.isVisible,
       description: item?.description || '',
       sortOrder: item?.sortOrder || 1,
@@ -171,8 +211,10 @@ export function CategoryLevel2Modal({
             <select
               value={form.parentId}
               onChange={(event) => handleChange('parentId', Number(event.target.value))}
+              onBlur={() => markTouched('parentId')}
               disabled={isReadOnly || isSaving}
               aria-label="Danh mục cấp 1"
+              aria-invalid={Boolean(parentError)}
               title="Danh mục cấp 1"
               className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900"
             >
@@ -182,6 +224,7 @@ export function CategoryLevel2Modal({
                 </option>
               ))}
             </select>
+            {parentError ? <p className="text-xs font-medium text-red-600">{parentError}</p> : null}
           </Field>
 
           <Field label="Hiển thị">
@@ -198,11 +241,19 @@ export function CategoryLevel2Modal({
           </Field>
 
           <Field label="Tên danh mục">
-            <Input value={form.name} onChange={(event) => handleChange('name', event.target.value)} readOnly={isReadOnly || isSaving} />
+            <Input
+              value={form.name}
+              onChange={(event) => handleChange('name', event.target.value)}
+              onBlur={() => markTouched('name')}
+              readOnly={isReadOnly || isSaving}
+              aria-invalid={Boolean(nameError)}
+            />
+            {nameError ? <p className="text-xs font-medium text-red-600">{nameError}</p> : null}
           </Field>
 
           <Field label="Slug">
-            <Input value={form.slug} readOnly />
+            <Input value={form.slug} readOnly aria-invalid={Boolean(slugError)} />
+            {slugError ? <p className="text-xs font-medium text-red-600">{slugError}</p> : null}
           </Field>
         </div>
 
