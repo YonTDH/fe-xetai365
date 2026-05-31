@@ -28,6 +28,9 @@ type FormState = {
   isVisible: boolean;
 };
 
+type FormErrors = Partial<Record<'name' | 'slug', string>>;
+type TouchedFields = Partial<Record<'name' | 'slug', boolean>>;
+
 function createFormState(item: AdminVehicleCategory | null): FormState {
   return {
     name: item?.name ?? '',
@@ -44,6 +47,22 @@ function slugifyVietnamese(value: string) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .replace(/-{2,}/g, '-');
+}
+
+function validateForm(form: FormState): FormErrors {
+  const errors: FormErrors = {};
+  const name = form.name.trim();
+  const slug = form.slug.trim();
+
+  if (!name) {
+    errors.name = 'Vui lòng nhập tên danh mục.';
+  }
+
+  if (!slug) {
+    errors.slug = 'Tên danh mục cần có chữ hoặc số để tạo slug.';
+  }
+
+  return errors;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -65,6 +84,7 @@ export function CategoryLevel1Modal({
   onSave,
 }: CategoryLevel1ModalProps) {
   const [form, setForm] = useState<FormState>(createFormState(item));
+  const [touched, setTouched] = useState<TouchedFields>({});
   const [initialSnapshot, setInitialSnapshot] = useState(() => JSON.stringify(createFormState(item)));
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -73,6 +93,7 @@ export function CategoryLevel1Modal({
     if (!open) return;
     const nextForm = createFormState(item);
     setForm(nextForm);
+    setTouched({});
     setInitialSnapshot(JSON.stringify(nextForm));
     setConfirmCloseOpen(false);
   }, [item, open]);
@@ -102,6 +123,13 @@ export function CategoryLevel1Modal({
   const isReadOnly = mode === 'view';
   const headingName = item?.name || form.name.trim() || 'Danh mục cấp 1 mới';
   const childCount = item?.children.length ?? 0;
+  const errors = validateForm(form);
+  const nameError = touched.name ? errors.name : undefined;
+  const slugError = touched.slug || touched.name ? errors.slug : undefined;
+
+  const markTouched = (key: keyof TouchedFields) => {
+    setTouched((prev) => ({ ...prev, [key]: true }));
+  };
 
   const handleChange = <TKey extends keyof FormState>(key: TKey, value: FormState[TKey]) => {
     setForm((prev) => {
@@ -124,10 +152,16 @@ export function CategoryLevel1Modal({
       return;
     }
 
+    const nextErrors = validateForm(form);
+    if (Object.keys(nextErrors).length > 0) {
+      setTouched({ name: true, slug: true });
+      return;
+    }
+
     onSave({
       id: item?.id,
-      name: form.name.trim() || item?.name || '',
-      slug: form.slug.trim() || item?.slug || '',
+      name: form.name.trim(),
+      slug: form.slug.trim(),
       isVisible: form.isVisible,
       description: item?.description || '',
       sortOrder: item?.sortOrder || 1,
@@ -163,11 +197,19 @@ export function CategoryLevel1Modal({
 
         <div className="grid gap-4 px-6 py-6 md:grid-cols-2">
           <Field label="Tên danh mục">
-            <Input value={form.name} onChange={(event) => handleChange('name', event.target.value)} readOnly={isReadOnly || isSaving} />
+            <Input
+              value={form.name}
+              onChange={(event) => handleChange('name', event.target.value)}
+              onBlur={() => markTouched('name')}
+              readOnly={isReadOnly || isSaving}
+              aria-invalid={Boolean(nameError)}
+            />
+            {nameError ? <p className="text-xs font-medium text-red-600">{nameError}</p> : null}
           </Field>
 
           <Field label="Slug">
-            <Input value={form.slug} readOnly />
+            <Input value={form.slug} readOnly aria-invalid={Boolean(slugError)} />
+            {slugError ? <p className="text-xs font-medium text-red-600">{slugError}</p> : null}
           </Field>
 
           <Field label="Hiển thị">
