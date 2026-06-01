@@ -2,7 +2,7 @@ import { type FormEvent, useCallback, useEffect, useState } from 'react';
 import { RefreshCw, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useAppToast } from '@/components/ui/toast';
+import { useAppToast } from '@/components/ui/toast-context';
 import {
   getAdminSiteSetting,
   updateAdminSiteSetting,

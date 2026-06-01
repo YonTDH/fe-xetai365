@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Circle, Eye, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useAppToast } from '@/components/ui/toast';
+import { useAppToast } from '@/components/ui/toast-context';
 import {
   createAdminVehicleCategoryLevel1,
   deleteAdminVehicleCategoryLevel1,
@@ -96,7 +96,7 @@ export function AdminCategoryLevel1Page() {
       setError('');
       const data = await listAdminVehicleCategoriesTree();
       setItems(data);
-    } catch (err: any) {
+    } catch (err) {
       setItems([]);
       setError(err instanceof Error ? err.message : 'Không thể tải danh mục cấp 1.');
     } finally {
@@ -127,7 +127,7 @@ export function AdminCategoryLevel1Page() {
   );
   const allSelected = filteredRows.length > 0 && selectedFilteredIds.length === filteredRows.length;
 
-  const toggleSelectAll = () => {
+  const toggleSelectAll = useCallback(() => {
     setSelectedIds((prev) => {
       if (allSelected) {
         return prev.filter((id) => !filteredRowIds.includes(id));
@@ -135,20 +135,20 @@ export function AdminCategoryLevel1Page() {
 
       return Array.from(new Set([...prev, ...filteredRowIds]));
     });
-  };
+  }, [allSelected, filteredRowIds]);
 
   const toggleSelectOne = (id: number) => {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
   };
 
-  const openModal = (mode: 'view' | 'edit', id: number) => {
+  const openModal = useCallback((mode: 'view' | 'edit', id: number) => {
     const item = items.find((entry) => entry.id === id);
     if (!item) {
       return;
     }
 
     setModalState({ mode, item });
-  };
+  }, [items]);
 
   const openCreateModal = () => {
     setModalState({ mode: 'create', item: null });
@@ -194,7 +194,7 @@ export function AdminCategoryLevel1Page() {
         type: 'success',
         message: `Đã cập nhật danh mục "${updated.name}".`,
       });
-    } catch (err: any) {
+    } catch (err) {
       const message = err instanceof globalThis.Error ? err.message : 'Không thể lưu danh mục cấp 1.';
       setError(message);
       showToast({
@@ -237,7 +237,7 @@ export function AdminCategoryLevel1Page() {
         type: 'success',
         message: `Đã xóa danh mục "${deleted.name || deleteState.name}".`,
       });
-    } catch (err: any) {
+    } catch (err) {
       const message = err instanceof globalThis.Error ? err.message : 'Không thể xóa mục đã chọn.';
       setError(message);
       showToast({
@@ -277,7 +277,7 @@ export function AdminCategoryLevel1Page() {
         type: 'success',
         message: `${isVisible ? 'Đã hiển thị' : 'Đã ẩn'} ${selectedItems.length} danh mục cấp 1.`,
       });
-    } catch (err: any) {
+    } catch (err) {
       const message = err instanceof globalThis.Error ? err.message : 'Không thể cập nhật hiển thị.';
       setError(message);
       showToast({ type: 'error', message });
@@ -305,7 +305,7 @@ export function AdminCategoryLevel1Page() {
         type: 'success',
         message: `Đã xóa ${selectedItems.length} danh mục cấp 1.`,
       });
-    } catch (err: any) {
+    } catch (err) {
       const message = err instanceof globalThis.Error ? err.message : 'Không thể xóa danh mục cấp 1 đã chọn.';
       setError(message);
       showToast({ type: 'error', message });
@@ -434,7 +434,7 @@ export function AdminCategoryLevel1Page() {
         ),
       },
     ],
-    [allSelected, isDeletingId, selectedIds]
+    [allSelected, isDeletingId, openModal, selectedIds, toggleSelectAll]
   );
 
   return (

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Circle, Eye, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useAppToast } from '@/components/ui/toast';
+import { useAppToast } from '@/components/ui/toast-context';
 import {
   createAdminBulletin,
   deleteAdminBulletin,
@@ -138,7 +138,7 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
       setError('');
       const data = await listAdminBulletins(type);
       setItems(data);
-    } catch (err: any) {
+    } catch (err) {
       setItems([]);
       setError(err instanceof Error ? err.message : 'Không thể tải danh sách bài viết.');
     } finally {
@@ -207,9 +207,8 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
       setError('');
       const detail = await getAdminBulletinDetail(id);
       setModalState({ mode, item: detail });
-    } catch (err: any) {
-      let message = 'Khong the xoa muc da chon.';
-      if (err instanceof globalThis.Error) message = err.message;
+    } catch {
+      const message = 'Khong the xoa muc da chon.';
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -247,9 +246,9 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
 
       setModalState(null);
       await loadItems();
-    } catch (err: any) {
+    } catch (err) {
       let message = 'Khong the xoa muc da chon.';
-      if (err instanceof globalThis.Error) message = err.message;
+      if (err instanceof Error) message = err.message;
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -272,9 +271,9 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
       setDeleteState(null);
       await loadItems();
       showToast({ type: 'success', message: 'Đã xóa bài viết.' });
-    } catch (err: any) {
+    } catch (err) {
       let message = 'Khong the xoa muc da chon.';
-      if (err instanceof globalThis.Error) message = err.message;
+      if (err instanceof Error) message = err.message;
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -304,9 +303,9 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
         type: 'success',
         message: `${isVisible ? 'Đã hiển thị' : 'Đã ẩn'} ${selectedItems.length} bài viết.`,
       });
-    } catch (err: any) {
+    } catch (err) {
       let message = 'Khong the xoa muc da chon.';
-      if (err instanceof globalThis.Error) message = err.message;
+      if (err instanceof Error) message = err.message;
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -326,9 +325,8 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
       setSelectedIds([]);
       await loadItems();
       showToast({ type: 'success', message: `Đã xóa ${selectedItems.length} bài viết.` });
-    } catch (err: any) {
-      let message = 'Khong the xoa muc da chon.';
-      if (err instanceof globalThis.Error) message = err.message;
+    } catch {
+      const message = 'Khong the xoa muc da chon.';
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -347,9 +345,9 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
       await loadItems();
       setBulkDeleteCount(0);
       showToast({ type: 'success', message: `Da xoa ${selectedItems.length} bai viet.` });
-    } catch (err: any) {
+    } catch (err) {
       let message = 'Khong the xoa bai viet da chon.';
-      if (err instanceof globalThis.Error) message = err.message;
+      if (err instanceof Error) message = err.message;
       setError(message);
       showToast({ type: 'error', message });
     } finally {

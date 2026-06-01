@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Circle, Eye, PhoneCall, RefreshCw, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useAppToast } from '@/components/ui/toast';
+import { useAppToast } from '@/components/ui/toast-context';
 import {
   markAdminContactRequestViewed,
   markAdminContactRequestsViewed,

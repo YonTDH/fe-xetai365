@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -92,20 +92,21 @@ export function CategoryLevel1Modal({
   useEffect(() => {
     if (!open) return;
     const nextForm = createFormState(item);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setForm(nextForm);
     setTouched({});
     setInitialSnapshot(JSON.stringify(nextForm));
     setConfirmCloseOpen(false);
   }, [item, open]);
 
-  const requestClose = () => {
+  const requestClose = useCallback(() => {
     if (isSaving) return;
     if ((mode === 'edit' || mode === 'create') && JSON.stringify(form) !== initialSnapshot) {
       setConfirmCloseOpen(true);
       return;
     }
     onClose();
-  };
+  }, [form, initialSnapshot, isSaving, mode, onClose]);
 
   useEffect(() => {
     if (!open || isSaving) return;
@@ -116,7 +117,7 @@ export function CategoryLevel1Modal({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [form, initialSnapshot, isSaving, mode, open]);
+  }, [isSaving, open, requestClose]);
 
   if (!open) return null;
 

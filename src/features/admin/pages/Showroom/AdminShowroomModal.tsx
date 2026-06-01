@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,19 +43,20 @@ export function AdminShowroomModal({
   useEffect(() => {
     if (!open) return;
     const nextForm = item || createEmptyItem();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setForm(nextForm);
     setInitialSnapshot(JSON.stringify(nextForm));
     setConfirmCloseOpen(false);
   }, [item, open]);
 
-  const requestClose = () => {
+  const requestClose = useCallback(() => {
     if (isSaving) return;
     if (JSON.stringify(form) !== initialSnapshot) {
       setConfirmCloseOpen(true);
       return;
     }
     onClose();
-  };
+  }, [form, initialSnapshot, isSaving, onClose]);
 
   useEffect(() => {
     if (!open || isSaving) return;
@@ -66,7 +67,7 @@ export function AdminShowroomModal({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [form, initialSnapshot, isSaving, onClose, open]);
+  }, [isSaving, open, requestClose]);
 
   if (!open) return null;
 

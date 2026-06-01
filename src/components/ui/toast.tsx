@@ -1,8 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { CheckCircle2, CircleAlert, Info, X } from 'lucide-react';
 import { Button } from './button';
-
-type AppToastType = 'success' | 'error' | 'info';
+import { ToastContext, type AppToastType, type ShowToastInput } from './toast-context';
 
 type ToastItem = {
   id: number;
@@ -10,20 +9,6 @@ type ToastItem = {
   title: string;
   message: string;
 };
-
-type ShowToastInput = {
-  type?: AppToastType;
-  title?: string;
-  message: string;
-  durationMs?: number;
-};
-
-type ToastContextValue = {
-  showToast: (input: ShowToastInput) => void;
-  dismissToast: (id: number) => void;
-};
-
-const ToastContext = createContext<ToastContextValue | null>(null);
 
 function getDefaultTitle(type: AppToastType) {
   if (type === 'success') return 'Thành công';
@@ -111,9 +96,11 @@ export function AppToastProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
+    const timers = timersRef.current;
+
     return () => {
-      timersRef.current.forEach((timer) => window.clearTimeout(timer));
-      timersRef.current.clear();
+      timers.forEach((timer) => window.clearTimeout(timer));
+      timers.clear();
     };
   }, []);
 
@@ -137,14 +124,4 @@ export function AppToastProvider({ children }: { children: ReactNode }) {
       </div>
     </ToastContext.Provider>
   );
-}
-
-export function useAppToast() {
-  const context = useContext(ToastContext);
-
-  if (!context) {
-    throw new Error('useAppToast must be used within AppToastProvider');
-  }
-
-  return context;
 }

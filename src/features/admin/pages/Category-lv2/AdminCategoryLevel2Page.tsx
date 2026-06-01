@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Circle, Eye, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useAppToast } from '@/components/ui/toast';
+import { useAppToast } from '@/components/ui/toast-context';
 import {
   createAdminVehicleCategoryLevel2,
   deleteAdminVehicleCategoryLevel2,
@@ -91,7 +91,7 @@ export function AdminCategoryLevel2Page() {
       setError('');
       const data = await listAdminVehicleCategoriesTree();
       setItems(data);
-    } catch (err: any) {
+    } catch (err) {
       setItems([]);
       setError(err instanceof Error ? err.message : 'Không thể tải danh mục cấp 2.');
     } finally {
@@ -197,7 +197,7 @@ export function AdminCategoryLevel2Page() {
         type: 'success',
         message: `Đã cập nhật danh mục cấp 2 "${updated.name}".`,
       });
-    } catch (err: any) {
+    } catch (err) {
       const message = err instanceof globalThis.Error ? err.message : 'Không thể lưu danh mục cấp 2.';
       setError(message);
       showToast({
@@ -241,7 +241,7 @@ export function AdminCategoryLevel2Page() {
         type: 'success',
         message: `Đã xóa danh mục cấp 2 "${deleted.name || deleteState.name}".`,
       });
-    } catch (err: any) {
+    } catch (err) {
       const message = err instanceof globalThis.Error ? err.message : 'Không thể xóa mục đã chọn.';
       setError(message);
       showToast({
@@ -282,7 +282,7 @@ export function AdminCategoryLevel2Page() {
         type: 'success',
         message: `${isVisible ? 'Đã hiển thị' : 'Đã ẩn'} ${selectedItems.length} danh mục cấp 2.`,
       });
-    } catch (err: any) {
+    } catch (err) {
       const message = err instanceof globalThis.Error ? err.message : 'Không thể cập nhật hiển thị.';
       setError(message);
       showToast({ type: 'error', message });
@@ -310,7 +310,7 @@ export function AdminCategoryLevel2Page() {
         type: 'success',
         message: `Đã xóa ${selectedItems.length} danh mục cấp 2.`,
       });
-    } catch (err: any) {
+    } catch (err) {
       const message = err instanceof globalThis.Error ? err.message : 'Không thể xóa danh mục cấp 2 đã chọn.';
       setError(message);
       showToast({ type: 'error', message });

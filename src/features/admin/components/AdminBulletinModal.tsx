@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -183,14 +183,14 @@ export function AdminBulletinModal({
     setConfirmCloseOpen(false);
   }, [item, open, type]);
 
-  const requestClose = () => {
+  const requestClose = useCallback(() => {
     if (isSaving) return;
     if (mode !== 'view' && (JSON.stringify(form) !== initialSnapshot || selectedImageFile || selectedDocxFile)) {
       setConfirmCloseOpen(true);
       return;
     }
     onClose();
-  };
+  }, [form, initialSnapshot, isSaving, mode, onClose, selectedDocxFile, selectedImageFile]);
 
   useEffect(() => {
     if (!selectedImageFile) {
@@ -211,7 +211,7 @@ export function AdminBulletinModal({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [form, initialSnapshot, isSaving, mode, onClose, open, selectedDocxFile, selectedImageFile]);
+  }, [isSaving, open, requestClose]);
 
   if (!open) return null;
 

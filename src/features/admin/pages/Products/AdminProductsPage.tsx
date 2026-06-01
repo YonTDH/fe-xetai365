@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Circle, Eye, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useAppToast } from '@/components/ui/toast';
+import { useAppToast } from '@/components/ui/toast-context';
 import { formatCurrencyVnd } from '@/lib/formatCurrencyVnd';
 import {
   createAdminProduct,
@@ -101,7 +101,7 @@ export function AdminProductsPage() {
       const [productItems, categoryTree] = await Promise.all([listAdminProducts(), listAdminVehicleCategoriesTree()]);
       setItems(productItems);
       setCategories(categoryTree);
-    } catch (err: any) {
+    } catch (err) {
       setItems([]);
       setCategories([]);
       setError(err instanceof Error ? err.message : 'Không thể tải sản phẩm.');
@@ -192,9 +192,8 @@ export function AdminProductsPage() {
       }
       setModalState(null);
       await loadData();
-    } catch (err: any) {
-      let message = 'Khong the xoa muc da chon.';
-      if (err instanceof globalThis.Error) message = err.message;
+    } catch {
+      const message = 'Khong the xoa muc da chon.';
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -222,9 +221,9 @@ export function AdminProductsPage() {
       setSelectedIds((prev) => prev.filter((id) => id !== deleteState.id));
       setDeleteState(null);
       showToast({ type: 'success', message: `Đã xóa sản phẩm "${deleted.title || deleteState.title}".` });
-    } catch (err: any) {
+    } catch (err) {
       let message = 'Khong the xoa muc da chon.';
-      if (err instanceof globalThis.Error) message = err.message;
+      if (err instanceof Error) message = err.message;
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -272,9 +271,9 @@ export function AdminProductsPage() {
         type: 'success',
         message: `${isVisible ? 'Đã hiển thị' : 'Đã ẩn'} ${selectedItems.length} sản phẩm.`,
       });
-    } catch (err: any) {
+    } catch (err) {
       let message = 'Khong the xoa muc da chon.';
-      if (err instanceof globalThis.Error) message = err.message;
+      if (err instanceof Error) message = err.message;
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -297,9 +296,8 @@ export function AdminProductsPage() {
         type: 'success',
         message: `Đã xóa ${selectedItems.length} sản phẩm.`,
       });
-    } catch (err: any) {
-      let message = 'Khong the xoa muc da chon.';
-      if (err instanceof globalThis.Error) message = err.message;
+    } catch {
+      const message = 'Khong the xoa muc da chon.';
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -321,9 +319,9 @@ export function AdminProductsPage() {
         type: 'success',
         message: `Da xoa ${selectedItems.length} san pham.`,
       });
-    } catch (err: any) {
+    } catch (err) {
       let message = 'Khong the xoa san pham da chon.';
-      if (err instanceof globalThis.Error) message = err.message;
+      if (err instanceof Error) message = err.message;
       setError(message);
       showToast({ type: 'error', message });
     } finally {

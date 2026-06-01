@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pencil, Plus, RefreshCw, Store, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAppToast } from '@/components/ui/toast';
+import { useAppToast } from '@/components/ui/toast-context';
 import {
   getAdminSiteSetting,
   updateAdminSiteSetting,
