@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
   adminMe,
@@ -51,10 +51,14 @@ export function AdminDashboardPage() {
 
       try {
         const [me] = await Promise.all([adminMe(), loadContactRequestSummary()]);
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
         setUser(me);
       } catch {
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
         clearAdminToken();
         setUser(null);
       } finally {
@@ -73,7 +77,6 @@ export function AdminDashboardPage() {
 
   const activeSection = getAdminSectionFromSlug(sectionSlug) ?? (sectionSlug ? null : DEFAULT_ADMIN_SECTION);
   const activeMeta = activeSection ? adminSectionMeta[activeSection] : null;
-  const pageTitle = useMemo(() => activeMeta?.title ?? '', [activeMeta]);
 
   const handleToggleGroup = (key: string) => {
     setOpenKeys((prev) => (prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key]));
@@ -123,8 +126,8 @@ export function AdminDashboardPage() {
       />
 
       <div className="min-h-screen xl:ml-72">
-        <main className="p-4 md:p-6 xl:p-6">
-          <AdminHeader title={pageTitle} description={activeMeta.description} user={user} onLogout={handleLogout} />
+        <main className="admin-main p-4 md:p-6 xl:p-6">
+          <AdminHeader title={activeMeta.title} description={activeMeta.description} user={user} onLogout={handleLogout} />
           <AdminSectionContent section={activeSection} onContactRequestsViewed={loadContactRequestSummary} />
         </main>
       </div>

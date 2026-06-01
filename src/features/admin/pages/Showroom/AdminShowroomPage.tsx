@@ -25,7 +25,9 @@ function parseShowrooms(value: string) {
     .split(/\r?\n/)
     .map((line, index) => {
       const trimmed = line.trim();
-      if (!trimmed) return null;
+      if (!trimmed) {
+        return null;
+      }
 
       const separatorIndex = trimmed.indexOf(':');
       if (separatorIndex === -1) {
@@ -119,7 +121,9 @@ export function AdminShowroomPage() {
 
   const persistShowrooms = useCallback(
     async (items: ShowroomItem[], successMessage: string) => {
-      if (!setting) return;
+      if (!setting) {
+        return;
+      }
 
       try {
         setIsSaving(true);
@@ -149,10 +153,7 @@ export function AdminShowroomPage() {
         ? showrooms.map((item) => (item.id === payload.id ? payload : item))
         : [...showrooms, payload];
 
-    await persistShowrooms(
-      items,
-      modalState?.mode === 'edit' ? 'Đã cập nhật showroom.' : 'Đã thêm showroom mới.'
-    );
+    await persistShowrooms(items, modalState?.mode === 'edit' ? 'Đã cập nhật showroom.' : 'Đã thêm showroom mới.');
   };
 
   const handleDeleteShowroom = async (id: string) => {
@@ -165,37 +166,23 @@ export function AdminShowroomPage() {
   return (
     <>
       <section className="space-y-5">
-        {error ? <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
+        {error ? <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</div> : null}
 
         <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-          <div className="flex flex-col gap-4 border-b border-slate-200 bg-gradient-to-r from-sky-50 via-white to-amber-50 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className="text-xs font-black uppercase tracking-[0.24em] text-sky-700">Cài đặt website</div>
-              <h2 className="mt-2 text-2xl font-black text-slate-950">Showroom</h2>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-                Quản lý danh sách showroom hiển thị ở footer. Mỗi showroom có 2 thuộc tính: trụ sở và địa chỉ.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" onClick={() => void loadSetting()} disabled={isLoading || isSaving}>
-                <RefreshCw className={['h-4 w-4', isLoading ? 'animate-spin' : ''].join(' ')} />
-                {isLoading ? 'Đang tải...' : 'Tải lại'}
-              </Button>
-              <Button
-                type="button"
-                onClick={() => setModalState({ mode: 'create', item: null })}
-                disabled={isLoading || isSaving}
-              >
-                <Plus className="h-4 w-4" />
-                Thêm showroom
-              </Button>
-            </div>
+          <div className="flex flex-col gap-3 border-b border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-end">
+            <Button type="button" variant="outline" onClick={() => void loadSetting()} disabled={isLoading || isSaving}>
+              <RefreshCw className={['h-4 w-4', isLoading ? 'animate-spin' : ''].join(' ')} />
+              {isLoading ? 'Đang tải...' : 'Tải lại'}
+            </Button>
+            <Button type="button" onClick={() => setModalState({ mode: 'create', item: null })} disabled={isLoading || isSaving}>
+              <Plus className="h-4 w-4" />
+              Thêm showroom
+            </Button>
           </div>
 
           <div className="p-5">
             {showrooms.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center text-sm text-slate-500">
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center text-sm font-medium text-slate-700">
                 Chưa có showroom nào.
               </div>
             ) : (
@@ -204,12 +191,12 @@ export function AdminShowroomPage() {
                   <article key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-100 text-sky-700">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-100 text-sky-800">
                           <Store className="h-5 w-5" />
                         </div>
                         <div>
                           <h3 className="text-base font-black text-slate-950">{item.office}</h3>
-                          <p className="mt-1 text-sm leading-6 text-slate-600">{item.address}</p>
+                          <p className="mt-1 text-sm leading-6 font-medium text-slate-800">{item.address}</p>
                         </div>
                       </div>
 
@@ -249,7 +236,9 @@ export function AdminShowroomPage() {
         item={modalState?.item || null}
         isSaving={isSaving}
         onClose={() => {
-          if (isSaving) return;
+          if (isSaving) {
+            return;
+          }
           setModalState(null);
         }}
         onSave={(payload) => void handleSaveShowroom(payload)}
@@ -262,11 +251,15 @@ export function AdminShowroomPage() {
         confirmLabel={isSaving ? 'Đang xóa...' : 'Xóa showroom'}
         busy={isSaving}
         onCancel={() => {
-          if (isSaving) return;
+          if (isSaving) {
+            return;
+          }
           setDeleteState(null);
         }}
         onConfirm={() => {
-          if (!deleteState) return;
+          if (!deleteState) {
+            return;
+          }
           void handleDeleteShowroom(deleteState.id).then(() => setDeleteState(null));
         }}
       />

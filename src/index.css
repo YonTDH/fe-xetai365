@@ -138,6 +138,34 @@
 }
 
 @layer components {
+  .admin-main {
+    @apply text-slate-950;
+  }
+
+  .admin-main :where(.text-slate-400) {
+    @apply text-slate-600;
+  }
+
+  .admin-main :where(.text-slate-500) {
+    @apply text-slate-700;
+  }
+
+  .admin-main :where(.text-slate-600) {
+    @apply text-slate-800;
+  }
+
+  .admin-main :where(.bg-white, .bg-white\/80) {
+    @apply text-slate-950;
+  }
+
+  .admin-main :where(input, textarea, select) {
+    @apply text-slate-950 placeholder:text-slate-500;
+  }
+
+  .admin-main :where(button, [role='button']) {
+    @apply font-semibold;
+  }
+
   .rich-content figure {
     @apply mx-auto my-6 table max-w-full;
   }
