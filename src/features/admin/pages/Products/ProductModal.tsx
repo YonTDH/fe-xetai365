@@ -3,169 +3,13 @@ import { ImageIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatCurrencyVnd } from '@/lib/formatCurrencyVnd';
-import { sanitizeHtml } from '@/lib/sanitizeHtml';
 import { AdminConfirmModal } from '../../components/AdminConfirmModal';
-import {
-  importAdminProductDocx,
-  uploadAdminImage,
-  type AdminProduct,
-  type AdminProductPayload,
-  type AdminVehicleCategory,
-} from '../../api/adminApi';
-
-type ProductModalProps = {
-  item: AdminProduct | null;
-  parentCategories: AdminVehicleCategory[];
-  mode: 'view' | 'edit' | 'create';
-  open: boolean;
-  isSaving?: boolean;
-  onClose: () => void;
-  onEdit?: () => void;
-  onSave: (payload: AdminProductPayload) => void;
-};
-
-type FormState = AdminProductPayload;
-type ProductTab = 'info' | 'content' | 'seo';
-
-function translateProductStatus(status: string) {
-  switch (status) {
-    case 'available':
-      return 'Đang bán';
-    case 'sold':
-      return 'Đã bán';
-    case 'sold_out':
-      return 'Hết hàng';
-    case 'coming_soon':
-      return 'Sắp về';
-    case 'draft':
-      return 'Bản nháp';
-    case 'hidden':
-      return 'Đã ẩn';
-    default:
-      return status;
-  }
-}
-
-function createFormState(item: AdminProduct | null, defaultCategoryLevel2Id: number): FormState {
-  return {
-    categoryLevel2Id: item?.categoryLevel2Id || defaultCategoryLevel2Id,
-    productCode: item?.productCode ?? '',
-    slug: item?.slug ?? '',
-    title: item?.title ?? '',
-    shortDescription: item?.shortDescription ?? '',
-    content: item?.content ?? '',
-    brand: item?.brand ?? '',
-    status: item?.status ?? 'available',
-    priceVnd: item?.priceVnd ?? '0',
-    location: item?.location ?? '',
-    imageUrl: item?.imageUrl ?? '',
-    isFeatured: item?.isFeatured ?? false,
-    isVisible: item?.isVisible ?? true,
-    sortOrder: item?.sortOrder ?? 1,
-    titleSeo: item?.titleSeo ?? '',
-    keywords: item?.keywords ?? '',
-    metaDescription: item?.metaDescription ?? '',
-  };
-}
-
-function hasHtml(value: string) {
-  return /<\/?[a-z][\s\S]*>/i.test(value);
-}
-
-function slugifyVietnamese(value: string) {
-  return String(value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .replace(/-{2,}/g, '-');
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block space-y-1.5">
-      <span className="text-sm font-semibold text-slate-900">{label}</span>
-      {children}
-    </label>
-  );
-}
-
-function TabButton({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={[
-        'rounded-lg border px-3 py-1.5 text-sm font-semibold transition',
-        active
-          ? 'border-[#135a91] bg-[#135a91] text-white'
-          : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:text-slate-950',
-      ].join(' ')}
-    >
-      {label}
-    </button>
-  );
-}
-
-function ProductPreviewCard({
-  form,
-  previewImageUrl,
-  compact = false,
-}: {
-  form: FormState;
-  previewImageUrl: string;
-  compact?: boolean;
-}) {
-  const previewHtml = hasHtml(form.content);
-
-  return (
-    <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      {previewImageUrl ? (
-        <img src={previewImageUrl} alt={form.title || 'Ảnh sản phẩm'} className={compact ? 'h-36 w-full object-cover' : 'h-44 w-full object-cover'} />
-      ) : (
-        <div className={['flex items-center justify-center bg-slate-100 text-sm font-medium text-slate-600', compact ? 'h-36' : 'h-44'].join(' ')}>
-          Chưa có ảnh đại diện
-        </div>
-      )}
-      <div className="space-y-3 p-4">
-        <div className="space-y-1">
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">{translateProductStatus(form.status)}</div>
-          <h3 className="line-clamp-2 text-xl font-black leading-6 text-slate-950">{form.title || 'Tên sản phẩm'}</h3>
-          <div className="flex flex-wrap items-center gap-2 text-sm font-medium text-slate-700">
-            <span>{form.brand || 'Chưa có hãng'}</span>
-            <span>-</span>
-            <span>{form.location || 'Chưa có vị trí'}</span>
-          </div>
-        </div>
-        <div className="text-lg font-bold text-[#135a91]">{formatCurrencyVnd(form.priceVnd)}</div>
-        <p className="line-clamp-3 whitespace-pre-line text-sm leading-6 font-medium text-slate-700">
-          {form.shortDescription || 'Mô tả ngắn sẽ hiển thị ở đây.'}
-        </p>
-        {!compact ? (
-          previewHtml ? (
-            <div
-              className="rich-content prose prose-slate max-w-none text-sm leading-7 [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-md [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-slate-200 [&_td]:p-2 [&_th]:border [&_th]:border-slate-200 [&_th]:bg-slate-50 [&_th]:p-2"
-              dangerouslySetInnerHTML={{ __html: sanitizeHtml(form.content) }}
-            />
-          ) : (
-            <div className="max-h-72 overflow-y-auto whitespace-pre-line rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm leading-7 font-medium text-slate-700">
-              {form.content || 'Nội dung chi tiết sẽ hiển thị ở đây.'}
-            </div>
-          )
-        ) : null}
-      </div>
-    </article>
-  );
-}
+import { importAdminProductDocx, uploadAdminImage } from '../../api/adminApi';
+import { Field, TabButton } from './ProductModalFields';
+import { ProductPreviewCard } from './ProductPreviewCard';
+import { RichTextEditor } from './ProductRichTextEditor';
+import type { FormState, ProductModalProps, ProductTab } from './productModalTypes';
+import { createFormState, slugifyVietnamese, translateProductStatus } from './productModalUtils';
 
 export function ProductModal({
   item,
@@ -358,7 +202,10 @@ export function ProductModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-3 py-4 backdrop-blur-sm"
+      className={[
+        'fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 backdrop-blur-sm',
+        activeTab === 'content' ? 'p-0' : 'px-3 py-4',
+      ].join(' ')}
       onMouseDown={(event) => {
         if (isSaving) {
           return;
@@ -370,7 +217,12 @@ export function ProductModal({
     >
       <div
         ref={panelRef}
-        className="flex max-h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+        className={[
+          'flex flex-col overflow-hidden border border-slate-200 bg-white shadow-2xl',
+          activeTab === 'content'
+            ? 'h-screen max-h-screen w-screen max-w-none rounded-none'
+            : 'h-[92vh] max-h-[92vh] w-full max-w-7xl rounded-2xl',
+        ].join(' ')}
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
@@ -393,8 +245,9 @@ export function ProductModal({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-4">
+        <div className="min-h-0 flex-1 overflow-hidden px-5 py-4">
           {activeTab === 'info' ? (
+            <div className="h-full overflow-y-auto pr-1">
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
               <div className="grid gap-3 md:grid-cols-2">
                 <Field label="Tên sản phẩm">
@@ -527,11 +380,12 @@ export function ProductModal({
                 )}
               </aside>
             </div>
+            </div>
           ) : null}
 
           {activeTab === 'content' ? (
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
-              <div className="space-y-3">
+            <div className="grid h-full min-h-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
+              <div className="h-full min-h-0 space-y-3 overflow-y-auto pr-1">
                 {!isReadOnly ? (
                   <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -587,18 +441,16 @@ export function ProductModal({
                   />
                 </Field>
                 <Field label="Nội dung">
-                  <textarea
+                  <RichTextEditor
                     value={form.content}
-                    onChange={(event) => handleChange('content', event.target.value)}
-                    readOnly={isReadOnly || isSaving}
-                    aria-label="Nội dung sản phẩm"
-                    title="Nội dung sản phẩm"
-                    className="min-h-[420px] w-full rounded-xl border border-slate-200 px-3 py-2 text-sm leading-6 text-slate-900"
+                    readOnly={isReadOnly}
+                    disabled={isSaving}
+                    onChange={(nextContent) => handleChange('content', nextContent)}
                   />
                 </Field>
               </div>
 
-              <aside className="xl:sticky xl:top-0 xl:self-start">
+              <aside className="h-full min-h-0 overflow-y-auto pr-1">
                 <div className="mb-2 text-sm font-semibold text-slate-900">Xem trước trực tiếp</div>
                 <ProductPreviewCard form={form} previewImageUrl={previewImageUrl} />
               </aside>
@@ -606,8 +458,8 @@ export function ProductModal({
           ) : null}
 
           {activeTab === 'seo' ? (
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
-              <div className="space-y-3">
+            <div className="grid h-full min-h-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
+              <div className="h-full min-h-0 space-y-3 overflow-y-auto pr-1">
                 <Field label="Title SEO">
                   <Input value={form.titleSeo} onChange={(event) => handleChange('titleSeo', event.target.value)} readOnly={isReadOnly || isSaving} />
                 </Field>
@@ -626,7 +478,7 @@ export function ProductModal({
                 </Field>
               </div>
 
-              <aside className="space-y-4 xl:sticky xl:top-0 xl:self-start">
+              <aside className="h-full min-h-0 space-y-4 overflow-y-auto pr-1">
                 <div>
                   <div className="mb-2 text-sm font-semibold text-slate-900">Xem trước SEO</div>
                   <div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
