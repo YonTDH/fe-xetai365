@@ -80,6 +80,25 @@ export type CategoryNode = {
 };
 
 export function getCategoryDisplayName(slug: string, rawName = '') {
+  switch (slug.trim().toLowerCase()) {
+    case 'so-mi-ro-mooc':
+      return 'Somiromooc';
+    case 'so-mi-ro-mooc-ben':
+      return 'Somiromooc ben';
+    case 'so-mi-ro-mooc-long':
+      return 'Somiromooc long';
+    case 'so-mi-ro-mooc-phu-tung':
+      return 'Phu tung Somiromooc';
+    case 'so-mi-ro-mooc-bon':
+      return 'Somiromooc bon';
+    case 'so-mi-ro-mooc-xitec':
+      return 'Somiromooc xitec';
+    case 'tong-hop-so-mi-ro-mooc':
+      return 'Tong hop Somiromooc';
+    default:
+      break;
+  }
+
   return rawName.trim() || slug;
 }
 

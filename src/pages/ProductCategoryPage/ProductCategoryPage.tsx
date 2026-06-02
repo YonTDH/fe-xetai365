@@ -59,7 +59,7 @@ export function ProductCategoryPage() {
       setError('');
       const [tree, items] = await Promise.all([
         listCatalogCategoriesTree(),
-        selectedSlug ? listProductsByCategory(selectedSlug, 30) : listProducts(30),
+        selectedSlug ? listProductsByCategory(selectedSlug, 100) : listProducts(100),
       ]);
       setCategoryTree(tree);
       setProducts(items);
