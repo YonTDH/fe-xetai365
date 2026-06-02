@@ -128,22 +128,16 @@ export function AdminDataTable<TData>({
 
   return (
     <Card className="rounded-3xl border border-slate-200 bg-white py-0 shadow-sm">
-      {filters ? (
+      {toolbar || filters ? (
         <CardHeader className="gap-4 border-b border-slate-200 px-5 py-4">
-          <div>{filters}</div>
+          {toolbar ? <div className="flex flex-wrap items-center justify-end gap-2">{toolbar}</div> : null}
+          {filters ? <div>{filters}</div> : null}
         </CardHeader>
       ) : null}
 
       <CardContent className="px-0">
         <Table>
           <TableHeader className="bg-slate-50/80">
-            {toolbar ? (
-              <TableRow className="hover:bg-transparent">
-                <TableHead colSpan={columns.length} className="bg-white px-5 py-4">
-                  <div className="flex flex-wrap items-center gap-2">{toolbar}</div>
-                </TableHead>
-              </TableRow>
-            ) : null}
             <TableRow className="hover:bg-transparent">
               {columns.map((column) => {
                 const isActive = sortState?.key === String(column.key);

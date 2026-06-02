@@ -19,6 +19,7 @@ export default function AppRoutes() {
       <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route path="/admin" element={<AdminDashboardPage />} />
       <Route path="/admin/:sectionSlug" element={<AdminDashboardPage />} />
+      <Route path="/admin/:sectionSlug/:action/:itemId" element={<AdminDashboardPage />} />
       <Route element={<MainLayout />}>
         <Route path="/" element={<LandingPage />} />
         <Route path="/gioi-thieu" element={<AboutPage />} />

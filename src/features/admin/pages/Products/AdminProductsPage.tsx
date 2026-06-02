@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { CheckCircle2, Circle, Eye, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -79,6 +80,8 @@ function renderVisibilityIcon(isVisible: boolean, label: string) {
 }
 
 export function AdminProductsPage() {
+  const navigate = useNavigate();
+  const { action, itemId } = useParams<{ action?: string; itemId?: string }>();
   const { showToast } = useAppToast();
   const [items, setItems] = useState<AdminProduct[]>([]);
   const [categories, setCategories] = useState<AdminVehicleCategory[]>([]);
@@ -93,6 +96,8 @@ export function AdminProductsPage() {
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'visible' | 'hidden'>('all');
   const [categoryFilter, setCategoryFilter] = useState<number>(0);
+  const editRouteId = action === 'sua' ? Number(itemId) : 0;
+  const isEditRoute = Number.isInteger(editRouteId) && editRouteId > 0;
 
   const loadData = useCallback(async () => {
     try {
@@ -124,6 +129,10 @@ export function AdminProductsPage() {
         }))
       ),
     [categories]
+  );
+  const editRouteItem = useMemo(
+    () => (isEditRoute ? items.find((entry) => entry.id === editRouteId) ?? null : null),
+    [editRouteId, isEditRoute, items]
   );
 
   const filteredRows = useMemo(() => {
@@ -175,8 +184,20 @@ export function AdminProductsPage() {
     setModalState(null);
   };
 
+  const closeEditPage = () => {
+    if (isSaving) return;
+    navigate('/admin/san-pham');
+  };
+
   const switchModalToEdit = () => {
-    setModalState((prev) => (prev?.item ? { mode: 'edit', item: prev.item } : prev));
+    if (!modalState?.item) return;
+    setModalState({ mode: 'edit', item: modalState.item });
+  };
+
+  const openContentEditPage = () => {
+    if (!modalState?.item) return;
+    setModalState(null);
+    navigate(`/admin/san-pham/sua/${modalState.item.id}`);
   };
 
   const handleSaveProduct = async (payload: AdminProductPayload) => {
@@ -186,12 +207,19 @@ export function AdminProductsPage() {
       if (modalState?.mode === 'create') {
         await createAdminProduct(payload);
         showToast({ type: 'success', message: `Đã tạo sản phẩm "${payload.title}".` });
-      } else if (modalState?.item) {
-        await updateAdminProduct(modalState.item.id, payload);
+      } else {
+        const targetItem = modalState?.item ?? editRouteItem;
+        if (!targetItem) {
+          return;
+        }
+        await updateAdminProduct(targetItem.id, payload);
         showToast({ type: 'success', message: `Đã cập nhật sản phẩm "${payload.title}".` });
       }
       setModalState(null);
       await loadData();
+      if (isEditRoute) {
+        navigate('/admin/san-pham');
+      }
     } catch {
       const message = 'Khong the xoa muc da chon.';
       setError(message);
@@ -422,6 +450,29 @@ export function AdminProductsPage() {
 
   return (
     <>
+      {isEditRoute ? (
+        <div className="space-y-4">
+          {error ? <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
+          {isLoading ? (
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">Dang tai san pham...</div>
+          ) : editRouteItem ? (
+            <ProductModal
+              open
+              variant="page"
+              item={editRouteItem}
+              parentCategories={categories}
+              mode="edit"
+              isSaving={isSaving}
+              onClose={closeEditPage}
+              onSave={handleSaveProduct}
+            />
+          ) : (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-6 text-sm text-amber-800">
+              Khong tim thay san pham can sua.
+            </div>
+          )}
+        </div>
+      ) : (
       <div className="space-y-4">
         {error ? <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
 
@@ -490,15 +541,17 @@ export function AdminProductsPage() {
           }
         />
       </div>
+      )}
 
       <ProductModal
-        open={Boolean(modalState)}
+        open={!isEditRoute && Boolean(modalState)}
         item={modalState?.item ?? null}
         parentCategories={categories}
         mode={modalState?.mode ?? 'view'}
         isSaving={isSaving}
         onClose={closeModal}
         onEdit={switchModalToEdit}
+        onEditContent={openContentEditPage}
         onSave={handleSaveProduct}
       />
 

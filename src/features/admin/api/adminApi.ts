@@ -192,6 +192,15 @@ type AdminUploadSignature = {
   signature: string;
 };
 
+export type AdminUploadedImage = {
+  publicId: string;
+  imageUrl: string;
+  width: number;
+  height: number;
+  format: string;
+  createdAt: string;
+};
+
 function getStorage() {
   if (typeof window === 'undefined') {
     return null;
@@ -744,6 +753,28 @@ export async function uploadAdminImage(file: File, folder: AdminUploadFolder) {
     imageUrl,
     publicId: toSafeString(data.public_id),
   };
+}
+
+export async function listAdminUploadedImages(folder: AdminUploadFolder = 'products', limit = 30) {
+  const query = new URLSearchParams({
+    folder,
+    limit: String(limit),
+  });
+
+  const data = (await adminFetch(`/api/admin/uploads/images?${query.toString()}`, {
+    method: 'GET',
+  })) as {
+    items?: Record<string, unknown>[];
+  };
+
+  return (data.items || []).map((item) => ({
+    publicId: toSafeString(item.publicId || item.public_id),
+    imageUrl: toSafeString(item.imageUrl || item.image_url),
+    width: toSafeNumber(item.width),
+    height: toSafeNumber(item.height),
+    format: toSafeString(item.format),
+    createdAt: toSafeString(item.createdAt || item.created_at),
+  })).filter((item) => item.publicId && item.imageUrl) satisfies AdminUploadedImage[];
 }
 
 export async function importAdminBulletinDocx(file: File, type: AdminBulletinType) {

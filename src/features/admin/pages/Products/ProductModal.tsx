@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ImageIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatCurrencyVnd } from '@/lib/formatCurrencyVnd';
 import { AdminConfirmModal } from '../../components/AdminConfirmModal';
-import { importAdminProductDocx, uploadAdminImage } from '../../api/adminApi';
+import { importAdminProductDocx, listAdminUploadedImages, uploadAdminImage, type AdminUploadedImage } from '../../api/adminApi';
 import { Field, TabButton } from './ProductModalFields';
 import { ProductPreviewCard } from './ProductPreviewCard';
 import { RichTextEditor } from './ProductRichTextEditor';
@@ -16,9 +16,11 @@ export function ProductModal({
   parentCategories,
   mode,
   open,
+  variant = 'modal',
   isSaving = false,
   onClose,
   onEdit,
+  onEditContent,
   onSave,
 }: ProductModalProps) {
   const categoryLevel2Options = useMemo(
@@ -34,6 +36,10 @@ export function ProductModal({
 
   const [form, setForm] = useState<FormState>(createFormState(item, categoryLevel2Options[0]?.id || 0));
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [imageSourceMode, setImageSourceMode] = useState<'local' | 'cloudinary'>('local');
+  const [cloudinaryImages, setCloudinaryImages] = useState<AdminUploadedImage[]>([]);
+  const [isLoadingCloudinaryImages, setIsLoadingCloudinaryImages] = useState(false);
+  const [cloudinaryImageError, setCloudinaryImageError] = useState('');
   const [selectedDocxFile, setSelectedDocxFile] = useState<File | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isImportingDocx, setIsImportingDocx] = useState(false);
@@ -55,6 +61,10 @@ export function ProductModal({
     setForm(nextForm);
     setInitialSnapshot(JSON.stringify(nextForm));
     setSelectedImageFile(null);
+    setImageSourceMode('local');
+    setCloudinaryImages([]);
+    setIsLoadingCloudinaryImages(false);
+    setCloudinaryImageError('');
     setSelectedDocxFile(null);
     setSelectedImagePreviewUrl('');
     setIsUploadingImage(false);
@@ -63,9 +73,9 @@ export function ProductModal({
     setDocxImportError('');
     setDocxImportSuccess('');
     setDocxImportWarnings([]);
-    setActiveTab('info');
+    setActiveTab(variant === 'page' ? 'content' : 'info');
     setConfirmCloseOpen(false);
-  }, [item, open, categoryLevel2Options]);
+  }, [item, open, categoryLevel2Options, variant]);
 
   const requestClose = useCallback(() => {
     if (isSaving) {
@@ -108,6 +118,8 @@ export function ProductModal({
   }
 
   const isReadOnly = mode === 'view';
+  const isPageVariant = variant === 'page';
+  const showContentEditor = isPageVariant && !isReadOnly;
   const previewImageUrl = selectedImagePreviewUrl || form.imageUrl;
 
   const handleChange = <TKey extends keyof FormState>(key: TKey, value: FormState[TKey]) => {
@@ -200,13 +212,39 @@ export function ProductModal({
     await importDocxFile(selectedDocxFile);
   };
 
+  const loadCloudinaryImages = async () => {
+    try {
+      setImageSourceMode('cloudinary');
+      setIsLoadingCloudinaryImages(true);
+      setCloudinaryImageError('');
+      const images = await listAdminUploadedImages('products', 40);
+      setCloudinaryImages(images);
+    } catch (err) {
+      setCloudinaryImages([]);
+      setCloudinaryImageError(err instanceof Error ? err.message : 'Khong the tai anh Cloudinary.');
+    } finally {
+      setIsLoadingCloudinaryImages(false);
+    }
+  };
+
+  const selectCloudinaryImage = (imageUrl: string) => {
+    handleChange('imageUrl', imageUrl);
+    setSelectedImageFile(null);
+    setSelectedImagePreviewUrl('');
+    setUploadError('');
+  };
+
   return (
     <div
-      className={[
-        'fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 backdrop-blur-sm',
-        activeTab === 'content' ? 'p-0' : 'px-3 py-4',
-      ].join(' ')}
+      className={
+        isPageVariant
+          ? 'w-full'
+          : 'fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-3 py-4 backdrop-blur-sm'
+      }
       onMouseDown={(event) => {
+        if (isPageVariant) {
+          return;
+        }
         if (isSaving) {
           return;
         }
@@ -219,8 +257,8 @@ export function ProductModal({
         ref={panelRef}
         className={[
           'flex flex-col overflow-hidden border border-slate-200 bg-white shadow-2xl',
-          activeTab === 'content'
-            ? 'h-screen max-h-screen w-screen max-w-none rounded-none'
+          isPageVariant
+            ? 'h-[calc(100vh-190px)] min-h-[640px] w-full rounded-2xl'
             : 'h-[92vh] max-h-[92vh] w-full max-w-7xl rounded-2xl',
         ].join(' ')}
         onMouseDown={(event) => event.stopPropagation()}
@@ -237,17 +275,19 @@ export function ProductModal({
           </Button>
         </div>
 
+        {!isPageVariant ? (
         <div className="border-b border-slate-200 bg-slate-50/70 px-5 py-2.5">
           <div className="flex flex-wrap items-center gap-2">
             <TabButton label="Thông tin" active={activeTab === 'info'} onClick={() => setActiveTab('info')} />
-            <TabButton label="Nội dung + xem trước" active={activeTab === 'content'} onClick={() => setActiveTab('content')} />
+            <TabButton label="Xem trước" active={activeTab === 'content'} onClick={() => setActiveTab('content')} />
             <TabButton label="SEO" active={activeTab === 'seo'} onClick={() => setActiveTab('seo')} />
           </div>
         </div>
+        ) : null}
 
-        <div className="min-h-0 flex-1 overflow-hidden px-5 py-4">
-          {activeTab === 'info' ? (
-            <div className="h-full overflow-y-auto pr-1">
+        <div className={[isPageVariant ? 'overflow-y-auto' : 'overflow-hidden', 'min-h-0 flex-1 px-5 py-4'].join(' ')}>
+          {activeTab === 'info' || isPageVariant ? (
+            <div className={isPageVariant ? 'pr-1' : 'h-full overflow-y-auto pr-1'}>
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
               <div className="grid gap-3 md:grid-cols-2">
                 <Field label="Tên sản phẩm">
@@ -353,19 +393,82 @@ export function ProductModal({
                   Ảnh đại diện
                 </div>
                 {!isReadOnly ? (
-                  <label className="inline-flex cursor-pointer items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(event) => {
-                        setSelectedImageFile(event.target.files?.[0] || null);
-                        setUploadError('');
-                      }}
-                      disabled={isSaving || isUploadingImage}
-                      className="hidden"
-                    />
-                    Chọn ảnh
-                  </label>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setImageSourceMode('local')}
+                        disabled={isSaving || isUploadingImage}
+                        className={[
+                          'rounded-xl border px-3 py-2 text-sm font-semibold transition',
+                          imageSourceMode === 'local'
+                            ? 'border-[#135a91] bg-[#135a91] text-white'
+                            : 'border-slate-200 bg-white text-slate-800 hover:bg-slate-100',
+                        ].join(' ')}
+                      >
+                        Từ máy
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void loadCloudinaryImages()}
+                        disabled={isSaving || isUploadingImage || isLoadingCloudinaryImages}
+                        className={[
+                          'rounded-xl border px-3 py-2 text-sm font-semibold transition',
+                          imageSourceMode === 'cloudinary'
+                            ? 'border-[#135a91] bg-[#135a91] text-white'
+                            : 'border-slate-200 bg-white text-slate-800 hover:bg-slate-100',
+                        ].join(' ')}
+                      >
+                        Cloudinary
+                      </button>
+                    </div>
+
+                    {imageSourceMode === 'local' ? (
+                      <label className="inline-flex cursor-pointer items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(event) => {
+                            setSelectedImageFile(event.target.files?.[0] || null);
+                            setUploadError('');
+                          }}
+                          disabled={isSaving || isUploadingImage}
+                          className="hidden"
+                        />
+                        Chọn ảnh từ máy
+                      </label>
+                    ) : null}
+
+                    {imageSourceMode === 'cloudinary' ? (
+                      <div className="space-y-2">
+                        {cloudinaryImageError ? <div className="text-xs font-medium text-red-600">{cloudinaryImageError}</div> : null}
+                        {isLoadingCloudinaryImages ? <div className="text-xs font-medium text-slate-600">Đang tải ảnh Cloudinary...</div> : null}
+                        {!isLoadingCloudinaryImages && !cloudinaryImages.length && !cloudinaryImageError ? (
+                          <div className="rounded-xl border border-dashed border-slate-300 bg-white px-3 py-4 text-center text-xs font-medium text-slate-600">
+                            Chưa có ảnh trong Cloudinary.
+                          </div>
+                        ) : null}
+                        {cloudinaryImages.length ? (
+                          <div className="grid max-h-48 grid-cols-3 gap-2 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2">
+                            {cloudinaryImages.map((image) => (
+                              <button
+                                key={image.publicId}
+                                type="button"
+                                onClick={() => selectCloudinaryImage(image.imageUrl)}
+                                className={[
+                                  'overflow-hidden rounded-lg border bg-white transition hover:border-[#135a91]',
+                                  form.imageUrl === image.imageUrl ? 'border-[#135a91] ring-2 ring-sky-100' : 'border-slate-200',
+                                ].join(' ')}
+                                title={image.publicId}
+                              >
+                                <img src={image.imageUrl} alt={image.publicId} className="h-16 w-full object-cover" />
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
                 ) : null}
                 <div className="text-xs font-medium text-slate-700">
                   {selectedImageFile ? selectedImageFile.name : previewImageUrl ? 'Đang dùng ảnh hiện tại.' : 'Chưa chọn tệp ảnh.'}
@@ -383,8 +486,9 @@ export function ProductModal({
             </div>
           ) : null}
 
-          {activeTab === 'content' ? (
-            <div className="grid h-full min-h-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
+          {activeTab === 'content' || isPageVariant ? (
+            <div className={isPageVariant ? 'mt-5 border-t border-slate-200 pt-5' : 'h-full min-h-0'}>
+              {showContentEditor ? (
               <div className="h-full min-h-0 space-y-3 overflow-y-auto pr-1">
                 {!isReadOnly ? (
                   <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3">
@@ -430,16 +534,6 @@ export function ProductModal({
                     ) : null}
                   </div>
                 ) : null}
-                <Field label="Mô tả ngắn">
-                  <textarea
-                    value={form.shortDescription}
-                    onChange={(event) => handleChange('shortDescription', event.target.value)}
-                    readOnly={isReadOnly || isSaving}
-                    aria-label="Mô tả ngắn"
-                    title="Mô tả ngắn"
-                    className="min-h-20 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
-                  />
-                </Field>
                 <Field label="Nội dung">
                   <RichTextEditor
                     value={form.content}
@@ -449,11 +543,14 @@ export function ProductModal({
                   />
                 </Field>
               </div>
+              ) : null}
 
+              {!isPageVariant ? (
               <aside className="h-full min-h-0 overflow-y-auto pr-1">
                 <div className="mb-2 text-sm font-semibold text-slate-900">Xem trước trực tiếp</div>
                 <ProductPreviewCard form={form} previewImageUrl={previewImageUrl} />
               </aside>
+              ) : null}
             </div>
           ) : null}
 
@@ -502,9 +599,14 @@ export function ProductModal({
           <Button type="button" variant="outline" onClick={requestClose} disabled={isSaving}>
             Đóng
           </Button>
-          {isReadOnly ? (
+          {isReadOnly && activeTab !== 'content' ? (
             <Button type="button" onClick={onEdit} disabled={isSaving || !onEdit}>
               Sửa
+            </Button>
+          ) : null}
+          {isReadOnly && activeTab === 'content' && !isPageVariant && item ? (
+            <Button type="button" onClick={onEditContent} disabled={isSaving || !onEditContent}>
+              Sửa nội dung
             </Button>
           ) : null}
           {!isReadOnly ? (

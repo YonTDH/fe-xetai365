@@ -170,11 +170,11 @@ export function AdminShowroomPage() {
 
         <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-col gap-3 border-b border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-end">
-            <Button type="button" variant="outline" onClick={() => void loadSetting()} disabled={isLoading || isSaving}>
+            <Button type="button" onClick={() => void loadSetting()} disabled={isLoading || isSaving} className="bg-[#135a91] text-white hover:bg-[#0f4b78]">
               <RefreshCw className={['h-4 w-4', isLoading ? 'animate-spin' : ''].join(' ')} />
               {isLoading ? 'Đang tải...' : 'Tải lại'}
             </Button>
-            <Button type="button" onClick={() => setModalState({ mode: 'create', item: null })} disabled={isLoading || isSaving}>
+            <Button type="button" onClick={() => setModalState({ mode: 'create', item: null })} disabled={isLoading || isSaving} className="bg-[#135a91] text-white hover:bg-[#0f4b78]">
               <Plus className="h-4 w-4" />
               Thêm showroom
             </Button>

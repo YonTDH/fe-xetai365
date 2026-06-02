@@ -5,9 +5,11 @@ export type ProductModalProps = {
   parentCategories: AdminVehicleCategory[];
   mode: 'view' | 'edit' | 'create';
   open: boolean;
+  variant?: 'modal' | 'page';
   isSaving?: boolean;
   onClose: () => void;
   onEdit?: () => void;
+  onEditContent?: () => void;
   onSave: (payload: AdminProductPayload) => void;
 };
 

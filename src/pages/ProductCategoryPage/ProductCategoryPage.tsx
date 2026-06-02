@@ -47,16 +47,16 @@ export function ProductCategoryPage() {
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [appliedKeyword, setAppliedKeyword] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState(() => (child || slug).trim());
 
   const selectedSlug = useMemo(() => (child || slug).trim(), [child, slug]);
-  const effectiveCategorySlug = selectedSlug || categoryFilter;
+  const effectiveCategorySlug = categoryFilter.trim();
   const categoryOptions = useMemo(() => flattenCategoryOptions(categoryTree), [categoryTree]);
 
   const categoryLabel = useMemo(() => {
-    if (!selectedSlug) return 'Tất cả sản phẩm';
-    return resolveCategoryLabelBySlug(categoryTree, selectedSlug) || selectedSlug;
-  }, [categoryTree, selectedSlug]);
+    if (!effectiveCategorySlug) return 'Tất cả sản phẩm';
+    return resolveCategoryLabelBySlug(categoryTree, effectiveCategorySlug) || effectiveCategorySlug;
+  }, [categoryTree, effectiveCategorySlug]);
 
   const breadcrumbLabel = useMemo(() => {
     if (parent && child) {
@@ -96,7 +96,7 @@ export function ProductCategoryPage() {
   }, [loadData]);
 
   useEffect(() => {
-    setCategoryFilter('');
+    setCategoryFilter(selectedSlug);
   }, [selectedSlug]);
 
   const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -107,10 +107,10 @@ export function ProductCategoryPage() {
   const handleResetFilters = () => {
     setSearchTerm('');
     setAppliedKeyword('');
-    setCategoryFilter('');
+    setCategoryFilter(selectedSlug);
   };
 
-  const hasActiveFilters = Boolean(appliedKeyword || categoryFilter);
+  const hasActiveFilters = Boolean(appliedKeyword || categoryFilter !== selectedSlug);
 
   return (
     <section className="bg-slate-50 py-8 md:py-12">
@@ -136,9 +136,8 @@ export function ProductCategoryPage() {
           <select
             value={categoryFilter}
             onChange={(event) => setCategoryFilter(event.target.value)}
-            disabled={Boolean(selectedSlug)}
             aria-label="Lọc danh mục sản phẩm"
-            className="h-10 w-full border border-slate-300 bg-white px-3 text-sm font-medium text-slate-900 outline-none disabled:bg-slate-100 disabled:text-slate-500"
+            className="h-10 w-full border border-slate-300 bg-white px-3 text-sm font-medium text-slate-900 outline-none"
           >
             <option value="">Tất cả danh mục</option>
             {categoryOptions.map((option) => (
