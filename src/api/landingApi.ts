@@ -79,6 +79,12 @@ export type CategoryNode = {
   children: CategoryNode[];
 };
 
+export type ProductListFilters = {
+  category?: string;
+  keyword?: string;
+  limit?: number;
+};
+
 export function getCategoryDisplayName(slug: string, rawName = '') {
   switch (slug.trim().toLowerCase()) {
     case 'so-mi-ro-mooc':
@@ -286,12 +292,16 @@ export async function listCatalogCategoriesTree(): Promise<CategoryNode[]> {
   return removeSummaryNodes((data.data || []).map(mapCategoryNode));
 }
 
-export async function listProductsByCategory(categorySlug: string, limit = 12): Promise<LandingProduct[]> {
+export async function listProductsByCategory(categorySlug: string, limit = 12, keyword = ''): Promise<LandingProduct[]> {
   const query = new URLSearchParams({
     category: categorySlug,
     limit: String(limit),
     page: '1',
   });
+  const normalizedKeyword = keyword.trim();
+  if (normalizedKeyword) {
+    query.set('keyword', normalizedKeyword);
+  }
 
   const response = await fetch(buildApiUrl(`/api/catalog/products?${query.toString()}`));
   const data = (await response.json().catch(() => ({}))) as {
@@ -309,11 +319,20 @@ export async function listProductsByCategory(categorySlug: string, limit = 12): 
   return (data.data?.items || []).map(mapProduct);
 }
 
-export async function listProducts(limit = 30): Promise<LandingProduct[]> {
+export async function listProducts(options: number | ProductListFilters = 30): Promise<LandingProduct[]> {
+  const filters = typeof options === 'number' ? { limit: options } : options;
   const query = new URLSearchParams({
-    limit: String(limit),
+    limit: String(filters.limit || 30),
     page: '1',
   });
+  const normalizedKeyword = filters.keyword?.trim() || '';
+  const normalizedCategory = filters.category?.trim() || '';
+  if (normalizedKeyword) {
+    query.set('keyword', normalizedKeyword);
+  }
+  if (normalizedCategory) {
+    query.set('category', normalizedCategory);
+  }
 
   const response = await fetch(buildApiUrl(`/api/catalog/products?${query.toString()}`));
   const data = (await response.json().catch(() => ({}))) as {

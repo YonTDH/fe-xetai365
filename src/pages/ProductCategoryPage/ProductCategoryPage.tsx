@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { Search, X } from 'lucide-react';
 import topProductImg from '@/assets/lading-page/top-product.png';
 import { PublicSectionHeading } from '@/components/PublicSectionHeading';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   listCatalogCategoriesTree,
   listProducts,
@@ -27,14 +29,29 @@ function resolveCategoryLabelBySlug(nodes: CategoryNode[], slug: string): string
   return '';
 }
 
+function flattenCategoryOptions(nodes: CategoryNode[]) {
+  return nodes.flatMap((node) => [
+    { slug: node.slug, label: node.name },
+    ...node.children.map((child) => ({
+      slug: child.slug,
+      label: `${node.name} / ${child.name}`,
+    })),
+  ]);
+}
+
 export function ProductCategoryPage() {
   const { slug = '', parent = '', child = '' } = useParams();
   const [products, setProducts] = useState<LandingProduct[]>([]);
   const [categoryTree, setCategoryTree] = useState<CategoryNode[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [appliedKeyword, setAppliedKeyword] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
 
   const selectedSlug = useMemo(() => (child || slug).trim(), [child, slug]);
+  const effectiveCategorySlug = selectedSlug || categoryFilter;
+  const categoryOptions = useMemo(() => flattenCategoryOptions(categoryTree), [categoryTree]);
 
   const categoryLabel = useMemo(() => {
     if (!selectedSlug) return 'Tất cả sản phẩm';
@@ -59,7 +76,9 @@ export function ProductCategoryPage() {
       setError('');
       const [tree, items] = await Promise.all([
         listCatalogCategoriesTree(),
-        selectedSlug ? listProductsByCategory(selectedSlug, 100) : listProducts(100),
+        effectiveCategorySlug
+          ? listProductsByCategory(effectiveCategorySlug, 100, appliedKeyword)
+          : listProducts({ limit: 100, keyword: appliedKeyword }),
       ]);
       setCategoryTree(tree);
       setProducts(items);
@@ -70,11 +89,28 @@ export function ProductCategoryPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedSlug]);
+  }, [appliedKeyword, effectiveCategorySlug]);
 
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    setCategoryFilter('');
+  }, [selectedSlug]);
+
+  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setAppliedKeyword(searchTerm.trim());
+  };
+
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setAppliedKeyword('');
+    setCategoryFilter('');
+  };
+
+  const hasActiveFilters = Boolean(appliedKeyword || categoryFilter);
 
   return (
     <section className="bg-slate-50 py-8 md:py-12">
@@ -82,6 +118,47 @@ export function ProductCategoryPage() {
         <div className="mb-3 text-xs uppercase tracking-wide text-slate-500">Sản phẩm / {breadcrumbLabel}</div>
 
         <PublicSectionHeading title={categoryLabel} />
+
+        <form
+          className="mb-5 grid gap-3 border border-slate-200 bg-white p-3 shadow-card md:grid-cols-[minmax(0,1fr)_240px_auto]"
+          onSubmit={handleSearchSubmit}
+        >
+          <label className="relative block">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Tìm theo tên, slug, tiêu đề SEO, từ khóa..."
+              className="h-10 rounded-none border-slate-300 pl-9 text-sm"
+            />
+          </label>
+
+          <select
+            value={categoryFilter}
+            onChange={(event) => setCategoryFilter(event.target.value)}
+            disabled={Boolean(selectedSlug)}
+            aria-label="Lọc danh mục sản phẩm"
+            className="h-10 w-full border border-slate-300 bg-white px-3 text-sm font-medium text-slate-900 outline-none disabled:bg-slate-100 disabled:text-slate-500"
+          >
+            <option value="">Tất cả danh mục</option>
+            {categoryOptions.map((option) => (
+              <option key={option.slug} value={option.slug}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+
+          <div className="flex items-center gap-2">
+            <Button type="submit" className="h-10 bg-navy-950 px-4 text-white hover:bg-navy-900">
+              <Search className="h-4 w-4" />
+              Tìm
+            </Button>
+            <Button type="button" variant="outline" className="h-10 px-3" onClick={handleResetFilters} disabled={!hasActiveFilters}>
+              <X className="h-4 w-4" />
+              Xóa
+            </Button>
+          </div>
+        </form>
 
         {isLoading && <p className="text-sm text-slate-600">Đang tải danh mục sản phẩm...</p>}
 
