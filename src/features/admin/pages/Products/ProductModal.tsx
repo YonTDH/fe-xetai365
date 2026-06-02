@@ -37,6 +37,7 @@ export function ProductModal({
   const [form, setForm] = useState<FormState>(createFormState(item, categoryLevel2Options[0]?.id || 0));
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [imageSourceMode, setImageSourceMode] = useState<'local' | 'cloudinary'>('local');
+  const [isCloudinaryPickerOpen, setIsCloudinaryPickerOpen] = useState(false);
   const [cloudinaryImages, setCloudinaryImages] = useState<AdminUploadedImage[]>([]);
   const [isLoadingCloudinaryImages, setIsLoadingCloudinaryImages] = useState(false);
   const [cloudinaryImageError, setCloudinaryImageError] = useState('');
@@ -62,6 +63,7 @@ export function ProductModal({
     setInitialSnapshot(JSON.stringify(nextForm));
     setSelectedImageFile(null);
     setImageSourceMode('local');
+    setIsCloudinaryPickerOpen(false);
     setCloudinaryImages([]);
     setIsLoadingCloudinaryImages(false);
     setCloudinaryImageError('');
@@ -215,6 +217,7 @@ export function ProductModal({
   const loadCloudinaryImages = async () => {
     try {
       setImageSourceMode('cloudinary');
+      setIsCloudinaryPickerOpen(true);
       setIsLoadingCloudinaryImages(true);
       setCloudinaryImageError('');
       const images = await listAdminUploadedImages('products', 40);
@@ -387,17 +390,20 @@ export function ProductModal({
                 </div>
               </div>
 
-              <aside className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <aside className="relative space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                   <ImageIcon className="h-4 w-4" />
                   Ảnh đại diện
                 </div>
                 {!isReadOnly ? (
-                  <div className="space-y-3">
+                  <div className="relative space-y-3">
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
-                        onClick={() => setImageSourceMode('local')}
+                        onClick={() => {
+                          setImageSourceMode('local');
+                          setIsCloudinaryPickerOpen(false);
+                        }}
                         disabled={isSaving || isUploadingImage}
                         className={[
                           'rounded-xl border px-3 py-2 text-sm font-semibold transition',
@@ -439,8 +445,8 @@ export function ProductModal({
                       </label>
                     ) : null}
 
-                    {imageSourceMode === 'cloudinary' ? (
-                      <div className="space-y-2">
+                    {imageSourceMode === 'cloudinary' && isCloudinaryPickerOpen ? (
+                      <div className="absolute left-0 right-0 top-14 z-20 space-y-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
                         {cloudinaryImageError ? <div className="text-xs font-medium text-red-600">{cloudinaryImageError}</div> : null}
                         {isLoadingCloudinaryImages ? <div className="text-xs font-medium text-slate-600">Đang tải ảnh Cloudinary...</div> : null}
                         {!isLoadingCloudinaryImages && !cloudinaryImages.length && !cloudinaryImageError ? (
@@ -466,6 +472,21 @@ export function ProductModal({
                             ))}
                           </div>
                         ) : null}
+                        <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              setImageSourceMode('local');
+                              setIsCloudinaryPickerOpen(false);
+                            }}
+                          >
+                            Hủy
+                          </Button>
+                          <Button type="button" onClick={() => setIsCloudinaryPickerOpen(false)}>
+                            Xong
+                          </Button>
+                        </div>
                       </div>
                     ) : null}
                   </div>
