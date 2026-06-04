@@ -201,7 +201,8 @@ export type AdminHomeSlidePayload = {
   isVisible: boolean;
 };
 
-type AdminUploadFolder = 'products' | 'news' | 'promotions' | 'recruitment' | 'services' | 'pages' | 'logos' | 'slides';
+export type AdminUploadFolder = 'products' | 'news' | 'promotions' | 'recruitment' | 'services' | 'pages' | 'logos' | 'slides';
+export type AdminUploadListFolder = AdminUploadFolder | 'all';
 
 type AdminUploadSignature = {
   cloudName: string;
@@ -831,7 +832,7 @@ export async function uploadAdminImage(file: File, folder: AdminUploadFolder) {
   };
 }
 
-export async function listAdminUploadedImages(folder: AdminUploadFolder = 'products', limit = 30) {
+export async function listAdminUploadedImages(folder: AdminUploadListFolder = 'products', limit = 30) {
   const query = new URLSearchParams({
     folder,
     limit: String(limit),

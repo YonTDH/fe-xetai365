@@ -1,5 +1,6 @@
-import { type ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ImageIcon, Pencil, Plus, RefreshCw, Save, Trash2, Upload, X } from 'lucide-react';
+import { ImageUploadModal, type ImageUploadModalItem } from '@/components/ImageUploadModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAppToast } from '@/components/ui/toast-context';
@@ -7,6 +8,7 @@ import {
   createAdminHomeSlide,
   deleteAdminHomeSlide,
   listAdminHomeSlides,
+  listAdminUploadedImages,
   updateAdminHomeSlide,
   uploadAdminImage,
   type AdminHomeSlide,
@@ -24,7 +26,7 @@ const emptyForm: SlideFormState = {
 };
 
 function createFormFromSlide(slide?: AdminHomeSlide | null): SlideFormState {
-  if (!slide) return emptyForm;
+  if (!slide) return { ...emptyForm };
   return {
     title: slide.title,
     imageUrl: slide.imageUrl,
@@ -34,13 +36,16 @@ function createFormFromSlide(slide?: AdminHomeSlide | null): SlideFormState {
   };
 }
 
+function getCloudImageTitle(publicId: string) {
+  return publicId.split('/').pop() || publicId;
+}
+
 export function AdminSlidesPage() {
   const { showToast } = useAppToast();
   const [slides, setSlides] = useState<AdminHomeSlide[]>([]);
   const [editingSlideId, setEditingSlideId] = useState<number | null>(null);
-  const [form, setForm] = useState<SlideFormState>(emptyForm);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState('');
+  const [form, setForm] = useState<SlideFormState>({ ...emptyForm });
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -69,45 +74,38 @@ export function AdminSlidesPage() {
     void loadSlides();
   }, [loadSlides]);
 
-  useEffect(() => {
-    if (!selectedFile) {
-      setPreviewUrl('');
-      return;
-    }
-
-    const objectUrl = URL.createObjectURL(selectedFile);
-    setPreviewUrl(objectUrl);
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [selectedFile]);
-
   const updateField = <TKey extends keyof SlideFormState>(key: TKey, value: SlideFormState[TKey]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
   const resetForm = () => {
     setEditingSlideId(null);
-    setForm(emptyForm);
-    setSelectedFile(null);
+    setForm({ ...emptyForm });
     setError('');
   };
 
   const startEdit = (slide: AdminHomeSlide) => {
     setEditingSlideId(slide.id);
     setForm(createFormFromSlide(slide));
-    setSelectedFile(null);
     setError('');
   };
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    setSelectedFile(event.target.files?.[0] || null);
-    setError('');
-  };
+  const loadSlideImages = useCallback(async (): Promise<ImageUploadModalItem[]> => {
+    const images = await listAdminUploadedImages('all', 100);
+    return images.map((item) => ({
+      id: item.publicId,
+      imageUrl: item.imageUrl,
+      title: getCloudImageTitle(item.publicId),
+    }));
+  }, []);
+
+  const uploadSlideImage = useCallback((file: File) => uploadAdminImage(file, 'slides'), []);
 
   const handleSave = async () => {
     try {
       setIsSaving(true);
       setError('');
-      const imageUrl = selectedFile ? (await uploadAdminImage(selectedFile, 'slides')).imageUrl : form.imageUrl.trim();
+      const imageUrl = form.imageUrl.trim();
       if (!imageUrl) {
         throw new Error('Vui lòng chọn ảnh slide.');
       }
@@ -161,8 +159,6 @@ export function AdminSlidesPage() {
     }
   };
 
-  const displayImage = previewUrl || form.imageUrl;
-
   return (
     <section className="space-y-5">
       {error ? <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
@@ -206,11 +202,10 @@ export function AdminSlidesPage() {
               />
             </label>
 
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100">
+            <Button type="button" variant="outline" onClick={() => setIsImageModalOpen(true)} disabled={isSaving}>
               <Upload className="h-4 w-4" />
-              Chọn ảnh từ máy
-              <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={isSaving} />
-            </label>
+              Chọn ảnh
+            </Button>
 
             <label className="block">
               <span className="mb-1.5 block text-sm font-bold text-slate-800">Link khi bấm ảnh</span>
@@ -252,8 +247,8 @@ export function AdminSlidesPage() {
             </div>
 
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
-              {displayImage ? (
-                <img src={displayImage} alt={form.title || 'Slide ảnh'} className="aspect-[16/8] w-full object-cover" />
+              {form.imageUrl ? (
+                <img src={form.imageUrl} alt={form.title || 'Slide ảnh'} className="aspect-[16/8] w-full object-cover" />
               ) : (
                 <div className="flex aspect-[16/8] items-center justify-center text-sm font-semibold text-slate-500">
                   <ImageIcon className="mr-2 h-4 w-4" />
@@ -291,8 +286,12 @@ export function AdminSlidesPage() {
 
           <div className="space-y-3 p-5">
             {slides.map((slide) => (
-              <article key={slide.id} className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm [&>img]:h-28 [&>img]:w-full [&>img]:shrink-0 [&>img]:rounded-xl [&>img]:border [&>img]:border-slate-100 [&>img]:bg-slate-100 sm:flex-row sm:items-center sm:[&>img]:h-24 sm:[&>img]:w-40 lg:[&>img]:h-28 lg:[&>img]:w-48">
-                <img src={slide.imageUrl} alt={slide.title || 'Slide ảnh'} className="aspect-[16/8] w-full object-cover" />
+              <article key={slide.id} className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center">
+                <img
+                  src={slide.imageUrl}
+                  alt={slide.title || 'Slide ảnh'}
+                  className="aspect-[16/8] h-28 w-full shrink-0 rounded-xl border border-slate-100 bg-slate-100 object-cover sm:h-24 sm:w-40 lg:h-28 lg:w-48"
+                />
                 <div className="flex min-w-0 flex-1 flex-col gap-2">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -336,6 +335,19 @@ export function AdminSlidesPage() {
           </div>
         </div>
       </div>
+
+      <ImageUploadModal
+        open={isImageModalOpen}
+        title="Chọn ảnh slide"
+        currentImageUrl={form.imageUrl}
+        loadImages={loadSlideImages}
+        uploadImage={uploadSlideImage}
+        onSelect={(imageUrl) => {
+          updateField('imageUrl', imageUrl);
+          setError('');
+        }}
+        onClose={() => setIsImageModalOpen(false)}
+      />
     </section>
   );
 }
