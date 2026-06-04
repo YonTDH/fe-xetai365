@@ -259,10 +259,10 @@ export function ProductModal({
       <div
         ref={panelRef}
         className={[
-          'flex flex-col overflow-hidden border border-slate-200 bg-white shadow-2xl',
+          'flex flex-col border border-slate-200 bg-white shadow-2xl',
           isPageVariant
-            ? 'h-[calc(100vh-190px)] min-h-[640px] w-full rounded-2xl'
-            : 'h-[92vh] max-h-[92vh] w-full max-w-7xl rounded-2xl',
+            ? 'min-h-[calc(100vh-160px)] w-full overflow-visible rounded-2xl'
+            : 'h-[92vh] max-h-[92vh] w-full max-w-7xl overflow-hidden rounded-2xl',
         ].join(' ')}
         onMouseDown={(event) => event.stopPropagation()}
       >
@@ -288,7 +288,7 @@ export function ProductModal({
         </div>
         ) : null}
 
-        <div className={[isPageVariant ? 'overflow-y-auto' : 'overflow-hidden', 'min-h-0 flex-1 px-5 py-4'].join(' ')}>
+        <div className={[isPageVariant ? 'overflow-visible pb-16' : 'overflow-hidden', 'min-h-0 flex-1 px-5 py-4'].join(' ')}>
           {activeTab === 'info' || isPageVariant ? (
             <div className={isPageVariant ? 'pr-1' : 'h-full overflow-y-auto pr-1'}>
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -510,7 +510,7 @@ export function ProductModal({
           {activeTab === 'content' || isPageVariant ? (
             <div className={isPageVariant ? 'mt-5 border-t border-slate-200 pt-5' : 'h-full min-h-0'}>
               {showContentEditor ? (
-              <div className="h-full min-h-0 space-y-3 overflow-y-auto pr-1">
+              <div className={isPageVariant ? 'space-y-3' : 'h-full min-h-0 space-y-3 overflow-y-auto pr-1'}>
                 {!isReadOnly ? (
                   <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -555,14 +555,16 @@ export function ProductModal({
                     ) : null}
                   </div>
                 ) : null}
-                <Field label="Nội dung">
-                  <RichTextEditor
-                    value={form.content}
-                    readOnly={isReadOnly}
-                    disabled={isSaving}
-                    onChange={(nextContent) => handleChange('content', nextContent)}
-                  />
-                </Field>
+                <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                  <Field label="Nội dung">
+                    <RichTextEditor
+                      value={form.content}
+                      readOnly={isReadOnly}
+                      disabled={isSaving}
+                      onChange={(nextContent) => handleChange('content', nextContent)}
+                    />
+                  </Field>
+                </section>
               </div>
               ) : null}
 
@@ -616,22 +618,27 @@ export function ProductModal({
           ) : null}
         </div>
 
-        <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-5 py-3">
-          <Button type="button" variant="outline" onClick={requestClose} disabled={isSaving}>
+        <div
+          className={[
+            'flex items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-5 py-2',
+            isPageVariant ? 'sticky bottom-0 z-40 rounded-b-2xl shadow-[0_-8px_24px_rgba(15,23,42,0.08)]' : '',
+          ].join(' ')}
+        >
+          <Button type="button" variant="outline" size="sm" onClick={requestClose} disabled={isSaving}>
             Đóng
           </Button>
           {isReadOnly && activeTab !== 'content' ? (
-            <Button type="button" onClick={onEdit} disabled={isSaving || !onEdit}>
+            <Button type="button" size="sm" onClick={onEdit} disabled={isSaving || !onEdit}>
               Sửa
             </Button>
           ) : null}
           {isReadOnly && activeTab === 'content' && !isPageVariant && item ? (
-            <Button type="button" onClick={onEditContent} disabled={isSaving || !onEditContent}>
+            <Button type="button" size="sm" onClick={onEditContent} disabled={isSaving || !onEditContent}>
               Sửa nội dung
             </Button>
           ) : null}
           {!isReadOnly ? (
-            <Button type="button" onClick={() => void handleSubmit()} disabled={isSaving || isUploadingImage}>
+            <Button type="button" size="sm" onClick={() => void handleSubmit()} disabled={isSaving || isUploadingImage}>
               {isSaving || isUploadingImage ? 'Đang lưu...' : mode === 'create' ? 'Tạo sản phẩm' : 'Lưu thay đổi'}
             </Button>
           ) : null}
