@@ -1,6 +1,8 @@
 import { AdminPlaceholderPanel } from '../components/AdminPlaceholderPanel';
 import type { AdminSectionKey } from '../config/menu';
 import { AdminAboutUsPage } from './AboutUs/AdminAboutUsPage';
+import { AdminLogoPage } from './Banner/AdminLogoPage';
+import { AdminSlidesPage } from './Banner/AdminSlidesPage';
 import { AdminContactRequestsPage } from './AdminContactRequestsPage';
 import { AdminCategoryLevel1Page } from './Category-lv1/AdminCategoryLevel1Page';
 import { AdminCategoryLevel2Page } from './Category-lv2/AdminCategoryLevel2Page';
@@ -39,6 +41,10 @@ export function AdminSectionContent({
       return <AdminServicesPage />;
     case 'contact-requests':
       return <AdminContactRequestsPage onViewedChange={onContactRequestsViewed} />;
+    case 'favicon':
+      return <AdminLogoPage />;
+    case 'slides':
+      return <AdminSlidesPage />;
     default:
       return <AdminPlaceholderPanel section={section} />;
   }

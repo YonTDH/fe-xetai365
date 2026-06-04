@@ -153,6 +153,7 @@ export type AdminSiteSetting = {
   ten: string;
   email: string;
   website: string;
+  logoUrl: string;
   dienthoai: string;
   diachi: string;
   fax: string;
@@ -181,7 +182,26 @@ export type AdminSiteSetting = {
 
 export type AdminSiteSettingPayload = Omit<AdminSiteSetting, 'id' | 'updatedAt'>;
 
-type AdminUploadFolder = 'products' | 'news' | 'promotions' | 'recruitment' | 'services' | 'pages';
+export type AdminHomeSlide = {
+  id: number;
+  title: string;
+  imageUrl: string;
+  linkUrl: string;
+  sortOrder: number;
+  isVisible: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export type AdminHomeSlidePayload = {
+  title: string;
+  imageUrl: string;
+  linkUrl: string;
+  sortOrder: number;
+  isVisible: boolean;
+};
+
+type AdminUploadFolder = 'products' | 'news' | 'promotions' | 'recruitment' | 'services' | 'pages' | 'logos' | 'slides';
 
 type AdminUploadSignature = {
   cloudName: string;
@@ -323,6 +343,7 @@ function mapAdminSiteSetting(item: Record<string, unknown> | null | undefined): 
     ten: toSafeString(source.ten),
     email: toSafeString(source.email),
     website: toSafeString(source.website),
+    logoUrl: toSafeString(source.logoUrl || source.logo_url),
     dienthoai: toSafeString(source.dienthoai),
     diachi: toSafeString(source.diachi),
     fax: toSafeString(source.fax),
@@ -347,6 +368,19 @@ function mapAdminSiteSetting(item: Record<string, unknown> | null | undefined): 
     tietkiem: toSafeString(source.tietkiem),
     hailong: toSafeString(source.hailong),
     updatedAt: toSafeString(source.updatedAt || source.updated_at) || null,
+  };
+}
+
+function mapAdminHomeSlide(item: Record<string, unknown>): AdminHomeSlide {
+  return {
+    id: toSafeNumber(item.id),
+    title: toSafeString(item.title),
+    imageUrl: toSafeString(item.imageUrl || item.image_url),
+    linkUrl: toSafeString(item.linkUrl || item.link_url),
+    sortOrder: toSafeNumber(item.sortOrder || item.sort_order) || 1,
+    isVisible: toSafeBoolean(item.isVisible ?? item.is_visible, true),
+    createdAt: toSafeString(item.createdAt || item.created_at) || null,
+    updatedAt: toSafeString(item.updatedAt || item.updated_at) || null,
   };
 }
 
@@ -636,6 +670,48 @@ export async function updateAdminSiteSetting(payload: AdminSiteSettingPayload) {
   })) as Record<string, unknown>;
 
   return mapAdminSiteSetting(data);
+}
+
+export async function listAdminHomeSlides() {
+  const data = (await adminFetch('/api/admin/home-slides', {
+    method: 'GET',
+  })) as {
+    items?: Record<string, unknown>[];
+  };
+
+  return (data.items || []).map(mapAdminHomeSlide);
+}
+
+export async function createAdminHomeSlide(payload: AdminHomeSlidePayload) {
+  const data = (await adminFetch('/api/admin/home-slides', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })) as Record<string, unknown>;
+
+  return mapAdminHomeSlide(data);
+}
+
+export async function updateAdminHomeSlide(id: number, payload: AdminHomeSlidePayload) {
+  const data = (await adminFetch(`/api/admin/home-slides/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })) as Record<string, unknown>;
+
+  return mapAdminHomeSlide(data);
+}
+
+export async function deleteAdminHomeSlide(id: number) {
+  const data = (await adminFetch(`/api/admin/home-slides/${id}`, {
+    method: 'DELETE',
+  })) as {
+    id?: number;
+    title?: string;
+  };
+
+  return {
+    id: toSafeNumber(data.id),
+    title: toSafeString(data.title),
+  };
 }
 
 export async function listAdminContactRequests(status?: AdminContactRequestStatus | 'all') {

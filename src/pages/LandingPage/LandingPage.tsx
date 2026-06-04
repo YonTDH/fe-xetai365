@@ -9,6 +9,7 @@ export function LandingPage() {
     hero: { title: '', description: '', hotline: '' },
     featuredProducts: [],
     latestNews: [],
+    slides: [],
   });
   const [categories, setCategories] = useState<CategoryNode[]>([]);
 
@@ -30,6 +31,7 @@ export function LandingPage() {
           hero: { title: '', description: '', hotline: '' },
           featuredProducts: [],
           latestNews: [],
+          slides: [],
         });
       }
 
@@ -51,6 +53,7 @@ export function LandingPage() {
     <>
       <HeroSection
         latestNews={homeData.latestNews}
+        slides={homeData.slides}
       />
       <FeaturesSection
         products={homeData.featuredProducts}

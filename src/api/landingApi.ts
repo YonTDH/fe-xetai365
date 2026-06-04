@@ -50,16 +50,26 @@ export type LandingHero = {
   hotline: string;
 };
 
+export type HomeSlide = {
+  id: number;
+  title: string;
+  imageUrl: string;
+  linkUrl: string;
+  sortOrder: number;
+};
+
 export type LandingHomeData = {
   hero: LandingHero;
   featuredProducts: LandingProduct[];
   latestNews: LandingNewsItem[];
+  slides: HomeSlide[];
 };
 
 export type PublicSiteSetting = {
   title: string;
   email: string;
   website: string;
+  logoUrl: string;
   dienthoai: string;
   diachi: string;
   hotline: string;
@@ -150,6 +160,7 @@ function mapPublicSiteSetting(item: Record<string, unknown> | null | undefined):
     title: toSafeString(source.title),
     email: toSafeString(source.email),
     website: toSafeString(source.website),
+    logoUrl: toSafeString(source.logoUrl || source.logo_url),
     dienthoai: toSafeString(source.dienthoai),
     diachi: toSafeString(source.diachi),
     hotline: toSafeString(source.hotline),
@@ -210,6 +221,16 @@ function mapNews(item: Record<string, unknown>): LandingNewsItem {
   };
 }
 
+function mapHomeSlide(item: Record<string, unknown>): HomeSlide {
+  return {
+    id: toSafeNumber(item.id),
+    title: toSafeString(item.title),
+    imageUrl: toSafeString(item.imageUrl || item.image_url),
+    linkUrl: toSafeString(item.linkUrl || item.link_url),
+    sortOrder: toSafeNumber(item.sortOrder || item.sort_order),
+  };
+}
+
 function mapCategoryNode(item: Record<string, unknown>): CategoryNode {
   const rawChildren = Array.isArray(item.children) ? item.children : [];
   const slug = toSafeString(item.slug);
@@ -242,6 +263,7 @@ export async function getLandingHomeData(): Promise<LandingHomeData> {
       hero?: Record<string, unknown>;
       featuredProducts?: Record<string, unknown>[];
       latestNews?: Record<string, unknown>[];
+      slides?: Record<string, unknown>[];
     };
     message?: string;
   };
@@ -259,6 +281,7 @@ export async function getLandingHomeData(): Promise<LandingHomeData> {
     },
     featuredProducts: (data.data.featuredProducts || []).map(mapProduct),
     latestNews: (data.data.latestNews || []).map(mapNews),
+    slides: (data.data.slides || []).map(mapHomeSlide).filter((slide) => slide.imageUrl),
   };
 }
 

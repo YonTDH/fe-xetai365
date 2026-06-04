@@ -63,6 +63,7 @@ function toPayload(setting: AdminSiteSetting): AdminSiteSettingPayload {
     ten: setting.ten,
     email: setting.email,
     website: setting.website,
+    logoUrl: setting.logoUrl,
     dienthoai: setting.dienthoai,
     diachi: setting.diachi,
     fax: setting.fax,

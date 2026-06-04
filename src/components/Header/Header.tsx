@@ -15,11 +15,12 @@ export function Header({ setting }: HeaderProps) {
   const contactLabel = formatPhoneLabel(phone);
   const contactHref = phone ? `tel:${phone.replace(/[^\d+]/g, '')}` : undefined;
   const brandLabel = setting?.title?.trim() || 'ĐỨC XE TẢI';
+  const logoUrl = setting?.logoUrl?.trim() || logoImg;
 
   return (
     <div className="container mx-auto flex h-20 items-center justify-between px-4 text-slate-100">
       <div className="flex shrink-0 items-center">
-        <img src={logoImg} alt="Nam Việt Logo" className="h-16 w-auto object-contain" />
+        <img src={logoUrl} alt="Nam Việt Logo" className="h-16 w-auto object-contain" />
       </div>
 
       <div className="hidden flex-1 px-4 text-center md:block">

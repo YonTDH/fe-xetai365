@@ -1,19 +1,85 @@
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import bannerImg from '@/assets/lading-page/red-and-white-modern-car-for-sale-facebook-ad-1_40870.png';
-import type { LandingNewsItem } from '@/api/landingApi';
+import type { HomeSlide, LandingNewsItem } from '@/api/landingApi';
 
 type HeroSectionProps = {
   latestNews: LandingNewsItem[];
+  slides: HomeSlide[];
 };
 
-export function HeroSection({ latestNews }: HeroSectionProps) {
+function normalizeLink(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith('/')) return trimmed;
+  return `/${trimmed.replace(/^\/+/, '')}`;
+}
+
+export function HeroSection({ latestNews, slides }: HeroSectionProps) {
+  const visibleSlides = useMemo(
+    () => (slides.length ? slides : [{ id: 0, title: 'Xe Tải 365 Banner', imageUrl: bannerImg, linkUrl: '', sortOrder: 1 }]),
+    [slides]
+  );
+  const [activeSlideIndex, setActiveSlideIndex] = useState(0);
+  const activeSlide = visibleSlides[Math.min(activeSlideIndex, visibleSlides.length - 1)] || visibleSlides[0];
+  const activeSlideLink = normalizeLink(activeSlide?.linkUrl || '');
+
+  useEffect(() => {
+    setActiveSlideIndex(0);
+  }, [visibleSlides.length]);
+
+  useEffect(() => {
+    if (visibleSlides.length <= 1) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      setActiveSlideIndex((current) => (current + 1) % visibleSlides.length);
+    }, 4500);
+
+    return () => window.clearInterval(intervalId);
+  }, [visibleSlides.length]);
+
+  const slideImage = (
+    <img
+      src={activeSlide.imageUrl}
+      alt={activeSlide.title || 'Xe Tải 365 Banner'}
+      className="block h-auto w-full object-cover transition-opacity duration-300"
+    />
+  );
+
   return (
     <section className="bg-slate-50 py-8 md:py-12">
       <div className="container mx-auto px-4">
         <div className="relative flex w-full flex-col lg:block">
-          <div className="relative w-full overflow-hidden rounded-sm shadow-md group lg:w-[calc(100%-344px)] xl:w-[calc(100%-412px)]">
-            <img src={bannerImg} alt="Xe Tai 365 Banner" className="block h-auto w-full object-cover" />
+          <div className="group relative w-full overflow-hidden rounded-sm shadow-md lg:w-[calc(100%-344px)] xl:w-[calc(100%-412px)]">
+            {activeSlideLink ? (
+              activeSlideLink.startsWith('http') ? (
+                <a href={activeSlideLink} target="_blank" rel="noreferrer">
+                  {slideImage}
+                </a>
+              ) : (
+                <Link to={activeSlideLink}>{slideImage}</Link>
+              )
+            ) : (
+              slideImage
+            )}
+
+            {visibleSlides.length > 1 ? (
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
+                {visibleSlides.map((slide, index) => (
+                  <button
+                    key={slide.id}
+                    type="button"
+                    onClick={() => setActiveSlideIndex(index)}
+                    className={[
+                      'h-2.5 rounded-full transition-all',
+                      index === activeSlideIndex ? 'w-8 bg-white' : 'w-2.5 bg-white/55 hover:bg-white/80',
+                    ].join(' ')}
+                    aria-label={`Chọn slide ${index + 1}`}
+                  />
+                ))}
+              </div>
+            ) : null}
           </div>
 
           <div className="mt-6 flex max-h-[380px] w-full flex-col overflow-hidden rounded-sm bg-white shadow-card lg:absolute lg:bottom-0 lg:right-0 lg:top-0 lg:mt-0 lg:w-[320px] lg:max-h-none xl:w-[380px]">

@@ -30,6 +30,7 @@ const emptyForm: AdminSiteSettingPayload = {
   ten: '',
   email: '',
   website: '',
+  logoUrl: '',
   dienthoai: '',
   diachi: '',
   fax: '',
