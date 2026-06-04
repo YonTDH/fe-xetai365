@@ -25,8 +25,6 @@ export type AdminSectionKey =
   | 'services'
   | 'contact-requests'
   | 'favicon'
-  | 'ads'
-  | 'videos'
   | 'slides';
 
 export type AdminMenuItem = {
@@ -57,8 +55,6 @@ export const adminSectionSlugs: Record<AdminSectionKey, string> = {
   services: 'dich-vu',
   'contact-requests': 'yeu-cau-lien-he',
   favicon: 'favicon',
-  ads: 'quang-cao',
-  videos: 'video',
   slides: 'slide-anh',
 };
 
@@ -102,8 +98,6 @@ export const adminMenuItems: AdminMenuItem[] = [
     icon: Images,
     children: [
       { key: 'favicon', label: 'Cập nhật favicon', icon: Images, section: 'favicon' },
-      { key: 'ads', label: 'Cập nhật quảng cáo', icon: Images, section: 'ads' },
-      { key: 'videos', label: 'Quản lý video', icon: Images, section: 'videos' },
       { key: 'slides', label: 'Slide ảnh', icon: Images, section: 'slides' },
     ],
   },
@@ -175,16 +169,6 @@ export const adminSectionMeta: Record<
   favicon: {
     title: 'Cập nhật favicon',
     description: 'Khu vực này dành cho cấu hình favicon và icon site.',
-    icon: Images,
-  },
-  ads: {
-    title: 'Cập nhật quảng cáo',
-    description: 'Khu vực này dành cho quản lý banner quảng cáo.',
-    icon: Images,
-  },
-  videos: {
-    title: 'Quản lý video',
-    description: 'Khu vực này dành cho danh sách video hiển thị trên site.',
     icon: Images,
   },
   slides: {
