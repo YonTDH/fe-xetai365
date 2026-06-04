@@ -101,7 +101,7 @@ export function Footer({ setting }: FooterProps) {
 
   return (
     <footer>
-      <div className="border-b border-slate-700 bg-[#0f172a] py-3 text-sm text-gray-300 md:text-base">
+      <div className="hidden border-b border-slate-700 bg-[#0f172a] py-3 text-sm text-gray-300 md:text-base">
         <div className="container mx-auto flex flex-wrap justify-center gap-6 px-4 md:gap-12">
           <span className="flex items-center gap-2 font-semibold tracking-wide">
             ĐIỆN THOẠI:
@@ -207,7 +207,7 @@ export function Footer({ setting }: FooterProps) {
 
               <SocialButton
                 href={youtubeHref}
-                label="Youtube"
+                label="YouTube"
                 className="flex h-9 w-9 items-center justify-center rounded bg-[#FF0000] text-white transition-opacity hover:opacity-80"
               >
                 <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
