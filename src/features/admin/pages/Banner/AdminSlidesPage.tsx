@@ -289,13 +289,13 @@ export function AdminSlidesPage() {
             </Button>
           </div>
 
-          <div className="grid gap-4 p-5 md:grid-cols-2">
+          <div className="space-y-3 p-5">
             {slides.map((slide) => (
-              <article key={slide.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+              <article key={slide.id} className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm [&>img]:h-28 [&>img]:w-full [&>img]:shrink-0 [&>img]:rounded-xl [&>img]:border [&>img]:border-slate-100 [&>img]:bg-slate-100 sm:flex-row sm:items-center sm:[&>img]:h-24 sm:[&>img]:w-40 lg:[&>img]:h-28 lg:[&>img]:w-48">
                 <img src={slide.imageUrl} alt={slide.title || 'Slide ảnh'} className="aspect-[16/8] w-full object-cover" />
-                <div className="space-y-2 p-4">
+                <div className="flex min-w-0 flex-1 flex-col gap-2">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
+                    <div className="min-w-0">
                       <h4 className="line-clamp-2 text-base font-black text-slate-950">{slide.title || 'Chưa đặt tên'}</h4>
                       <p className="mt-1 text-xs font-medium text-slate-500">Thứ tự: {slide.sortOrder}</p>
                     </div>
@@ -329,7 +329,7 @@ export function AdminSlidesPage() {
             ))}
 
             {!slides.length ? (
-              <div className="md:col-span-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm font-medium text-slate-600">
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm font-medium text-slate-600">
                 Chưa có slide ảnh.
               </div>
             ) : null}

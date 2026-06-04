@@ -17,48 +17,79 @@ function normalizeLink(value: string) {
 }
 
 export function HeroSection({ latestNews, slides }: HeroSectionProps) {
-  const visibleSlides = useMemo(
-    () => (slides.length ? slides : [{ id: 0, title: 'Xe Tải 365 Banner', imageUrl: bannerImg, linkUrl: '', sortOrder: 1 }]),
-    [slides]
-  );
+  const visibleSlides = useMemo(() => slides.filter((slide) => slide.imageUrl.trim()), [slides]);
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
-  const activeSlide = visibleSlides[Math.min(activeSlideIndex, visibleSlides.length - 1)] || visibleSlides[0];
-  const activeSlideLink = normalizeLink(activeSlide?.linkUrl || '');
+  const [renderedSlideIndex, setRenderedSlideIndex] = useState(0);
+  const [isSlideVisible, setIsSlideVisible] = useState(true);
+  const renderedSlide = visibleSlides.length ? visibleSlides[renderedSlideIndex % visibleSlides.length] : null;
+  const renderedSlideLink = normalizeLink(renderedSlide?.linkUrl || '');
 
   useEffect(() => {
     setActiveSlideIndex(0);
+    setRenderedSlideIndex(0);
+    setIsSlideVisible(true);
   }, [visibleSlides.length]);
+
+  useEffect(() => {
+    if (!visibleSlides.length) {
+      setRenderedSlideIndex(0);
+      setIsSlideVisible(true);
+      return undefined;
+    }
+
+    if (activeSlideIndex === renderedSlideIndex) {
+      setIsSlideVisible(true);
+      return undefined;
+    }
+
+    setIsSlideVisible(false);
+    const timeoutId = window.setTimeout(() => {
+      setRenderedSlideIndex(activeSlideIndex);
+      window.requestAnimationFrame(() => setIsSlideVisible(true));
+    }, 220);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [activeSlideIndex, renderedSlideIndex, visibleSlides.length]);
 
   useEffect(() => {
     if (visibleSlides.length <= 1) return undefined;
 
     const intervalId = window.setInterval(() => {
       setActiveSlideIndex((current) => (current + 1) % visibleSlides.length);
-    }, 4500);
+    }, 10000);
 
     return () => window.clearInterval(intervalId);
   }, [visibleSlides.length]);
 
-  const slideImage = (
+  const slideImage = renderedSlide ? (
     <img
-      src={activeSlide.imageUrl}
-      alt={activeSlide.title || 'Xe Tải 365 Banner'}
-      className="block h-auto w-full object-cover transition-opacity duration-300"
+      src={renderedSlide.imageUrl}
+      alt={renderedSlide.title || 'Slide ảnh'}
+      className={[
+        'block h-full w-full object-cover transition-all duration-500 ease-out',
+        isSlideVisible ? 'translate-x-0 scale-100 opacity-100' : 'translate-x-4 scale-[1.015] opacity-0',
+      ].join(' ')}
     />
+  ) : (
+    <div className="flex h-full w-full items-center justify-center bg-slate-200 text-sm font-semibold text-slate-500">
+      Chưa có slide hiển thị
+    </div>
   );
 
   return (
     <section className="bg-slate-50 py-8 md:py-12">
       <div className="container mx-auto px-4">
         <div className="relative flex w-full flex-col lg:block">
-          <div className="group relative w-full overflow-hidden rounded-sm shadow-md lg:w-[calc(100%-344px)] xl:w-[calc(100%-412px)]">
-            {activeSlideLink ? (
-              activeSlideLink.startsWith('http') ? (
-                <a href={activeSlideLink} target="_blank" rel="noreferrer">
+          <div className="group relative h-[210px] w-full overflow-hidden rounded-sm shadow-md sm:h-[320px] md:h-[420px] lg:h-[430px] lg:w-[calc(100%-344px)] xl:h-[548px] xl:w-[calc(100%-412px)]">
+            {renderedSlide && renderedSlideLink ? (
+              renderedSlideLink.startsWith('http') ? (
+                <a href={renderedSlideLink} target="_blank" rel="noreferrer" className="block h-full w-full">
                   {slideImage}
                 </a>
               ) : (
-                <Link to={activeSlideLink}>{slideImage}</Link>
+                <Link to={renderedSlideLink} className="block h-full w-full">
+                  {slideImage}
+                </Link>
               )
             ) : (
               slideImage
