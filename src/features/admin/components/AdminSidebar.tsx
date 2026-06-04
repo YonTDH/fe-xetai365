@@ -58,7 +58,7 @@ export function AdminSidebar({
           </div>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4 [scrollbar-color:#38bdf8_#0f172a] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-button]:hidden [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:border-2 [&::-webkit-scrollbar-thumb]:border-slate-900 [&::-webkit-scrollbar-thumb]:bg-sky-400/70 [&::-webkit-scrollbar-thumb:hover]:bg-sky-300 [&::-webkit-scrollbar-track]:rounded-full [&::-webkit-scrollbar-track]:bg-slate-950/40">
           {adminMenuItems.map((item) => {
             const Icon = item.icon;
             const isOpen = openKeys.includes(item.key);
