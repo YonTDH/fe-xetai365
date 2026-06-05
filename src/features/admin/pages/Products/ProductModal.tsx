@@ -1,10 +1,11 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ImageIcon, X } from 'lucide-react';
+import { ImageUploadModal, type ImageUploadModalItem } from '@/components/ImageUploadModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatCurrencyVnd } from '@/lib/formatCurrencyVnd';
 import { AdminConfirmModal } from '../../components/AdminConfirmModal';
-import { importAdminProductDocx, listAdminUploadedImages, uploadAdminImage, type AdminUploadedImage } from '../../api/adminApi';
+import { importAdminProductDocx, listAdminUploadedImages, uploadAdminImage } from '../../api/adminApi';
 import { Field, TabButton } from './ProductModalFields';
 import { ProductPreviewCard } from './ProductPreviewCard';
 import { RichTextEditor } from './ProductRichTextEditor';
@@ -35,21 +36,14 @@ export function ProductModal({
   );
 
   const [form, setForm] = useState<FormState>(createFormState(item, categoryLevel2Options[0]?.id || 0));
-  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
-  const [imageSourceMode, setImageSourceMode] = useState<'local' | 'cloudinary'>('local');
-  const [isCloudinaryPickerOpen, setIsCloudinaryPickerOpen] = useState(false);
-  const [cloudinaryImages, setCloudinaryImages] = useState<AdminUploadedImage[]>([]);
-  const [isLoadingCloudinaryImages, setIsLoadingCloudinaryImages] = useState(false);
-  const [cloudinaryImageError, setCloudinaryImageError] = useState('');
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedDocxFile, setSelectedDocxFile] = useState<File | null>(null);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isImportingDocx, setIsImportingDocx] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [docxImportError, setDocxImportError] = useState('');
   const [docxImportSuccess, setDocxImportSuccess] = useState('');
   const [docxImportWarnings, setDocxImportWarnings] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<ProductTab>('info');
-  const [selectedImagePreviewUrl, setSelectedImagePreviewUrl] = useState('');
   const [initialSnapshot, setInitialSnapshot] = useState('');
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -61,15 +55,8 @@ export function ProductModal({
     const nextForm = createFormState(item, categoryLevel2Options[0]?.id || 0);
     setForm(nextForm);
     setInitialSnapshot(JSON.stringify(nextForm));
-    setSelectedImageFile(null);
-    setImageSourceMode('local');
-    setIsCloudinaryPickerOpen(false);
-    setCloudinaryImages([]);
-    setIsLoadingCloudinaryImages(false);
-    setCloudinaryImageError('');
+    setIsImageModalOpen(false);
     setSelectedDocxFile(null);
-    setSelectedImagePreviewUrl('');
-    setIsUploadingImage(false);
     setIsImportingDocx(false);
     setUploadError('');
     setDocxImportError('');
@@ -83,24 +70,12 @@ export function ProductModal({
     if (isSaving) {
       return;
     }
-    if (mode !== 'view' && (JSON.stringify(form) !== initialSnapshot || selectedImageFile || selectedDocxFile)) {
+    if (mode !== 'view' && (JSON.stringify(form) !== initialSnapshot || selectedDocxFile)) {
       setConfirmCloseOpen(true);
       return;
     }
     onClose();
-  }, [form, initialSnapshot, isSaving, mode, onClose, selectedDocxFile, selectedImageFile]);
-
-  useEffect(() => {
-    if (!selectedImageFile) {
-      setSelectedImagePreviewUrl('');
-      return;
-    }
-
-    const objectUrl = URL.createObjectURL(selectedImageFile);
-    setSelectedImagePreviewUrl(objectUrl);
-
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [selectedImageFile]);
+  }, [form, initialSnapshot, isSaving, mode, onClose, selectedDocxFile]);
 
   useEffect(() => {
     if (!open || isSaving) {
@@ -115,6 +90,17 @@ export function ProductModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSaving, open, requestClose]);
 
+  const loadProductImages = useCallback(async (): Promise<ImageUploadModalItem[]> => {
+    const images = await listAdminUploadedImages('all', 100);
+    return images.map((image) => ({
+      id: image.publicId,
+      imageUrl: image.imageUrl,
+      title: image.publicId.split('/').pop() || image.publicId,
+    }));
+  }, []);
+
+  const uploadProductImage = useCallback((file: File) => uploadAdminImage(file, 'products'), []);
+
   if (!open) {
     return null;
   }
@@ -122,7 +108,7 @@ export function ProductModal({
   const isReadOnly = mode === 'view';
   const isPageVariant = variant === 'page';
   const showContentEditor = isPageVariant && !isReadOnly;
-  const previewImageUrl = selectedImagePreviewUrl || form.imageUrl;
+  const previewImageUrl = form.imageUrl;
 
   const handleChange = <TKey extends keyof FormState>(key: TKey, value: FormState[TKey]) => {
     setForm((prev) => {
@@ -139,39 +125,16 @@ export function ProductModal({
     });
   };
 
-  const uploadPendingImage = async () => {
-    if (!selectedImageFile) {
-      return form.imageUrl;
-    }
-
-    setIsUploadingImage(true);
-    setUploadError('');
-
-    try {
-      const uploaded = await uploadAdminImage(selectedImageFile, 'products');
-      return uploaded.imageUrl;
-    } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Không thể upload ảnh.');
-    } finally {
-      setIsUploadingImage(false);
-    }
-  };
-
   const handleSubmit = async () => {
     if (isReadOnly) {
       requestClose();
       return;
     }
 
-    try {
-      const imageUrl = await uploadPendingImage();
-      onSave({
-        ...form,
-        imageUrl,
-      });
-    } catch (err) {
-      setUploadError(err instanceof Error ? err.message : 'Không thể upload ảnh.');
-    }
+    onSave({
+      ...form,
+      imageUrl: form.imageUrl.trim(),
+    });
   };
 
   const importDocxFile = async (file: File) => {
@@ -212,29 +175,6 @@ export function ProductModal({
       return;
     }
     await importDocxFile(selectedDocxFile);
-  };
-
-  const loadCloudinaryImages = async () => {
-    try {
-      setImageSourceMode('cloudinary');
-      setIsCloudinaryPickerOpen(true);
-      setIsLoadingCloudinaryImages(true);
-      setCloudinaryImageError('');
-      const images = await listAdminUploadedImages('products', 40);
-      setCloudinaryImages(images);
-    } catch (err) {
-      setCloudinaryImages([]);
-      setCloudinaryImageError(err instanceof Error ? err.message : 'Khong the tai anh Cloudinary.');
-    } finally {
-      setIsLoadingCloudinaryImages(false);
-    }
-  };
-
-  const selectCloudinaryImage = (imageUrl: string) => {
-    handleChange('imageUrl', imageUrl);
-    setSelectedImageFile(null);
-    setSelectedImagePreviewUrl('');
-    setUploadError('');
   };
 
   return (
@@ -323,9 +263,10 @@ export function ProductModal({
                     <Input
                       value={isReadOnly ? formatCurrencyVnd(form.priceVnd) : form.priceVnd}
                       onChange={(event) => handleChange('priceVnd', event.target.value)}
+                      placeholder="Ví dụ: 7x.000.000VNĐ-9X.000.000VNĐ"
                       readOnly={isReadOnly || isSaving}
                     />
-                    {!isReadOnly ? <div className="text-xs font-medium text-slate-700">{formatCurrencyVnd(form.priceVnd)}</div> : null}
+                    {!isReadOnly && form.priceVnd ? <div className="text-xs font-medium text-slate-700">{formatCurrencyVnd(form.priceVnd)}</div> : null}
                   </div>
                 </Field>
                 <Field label="Trạng thái">
@@ -396,103 +337,12 @@ export function ProductModal({
                   Ảnh đại diện
                 </div>
                 {!isReadOnly ? (
-                  <div className="relative space-y-3">
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setImageSourceMode('local');
-                          setIsCloudinaryPickerOpen(false);
-                        }}
-                        disabled={isSaving || isUploadingImage}
-                        className={[
-                          'rounded-xl border px-3 py-2 text-sm font-semibold transition',
-                          imageSourceMode === 'local'
-                            ? 'border-[#135a91] bg-[#135a91] text-white'
-                            : 'border-slate-200 bg-white text-slate-800 hover:bg-slate-100',
-                        ].join(' ')}
-                      >
-                        Từ máy
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void loadCloudinaryImages()}
-                        disabled={isSaving || isUploadingImage || isLoadingCloudinaryImages}
-                        className={[
-                          'rounded-xl border px-3 py-2 text-sm font-semibold transition',
-                          imageSourceMode === 'cloudinary'
-                            ? 'border-[#135a91] bg-[#135a91] text-white'
-                            : 'border-slate-200 bg-white text-slate-800 hover:bg-slate-100',
-                        ].join(' ')}
-                      >
-                        Cloudinary
-                      </button>
-                    </div>
-
-                    {imageSourceMode === 'local' ? (
-                      <label className="inline-flex cursor-pointer items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-100">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(event) => {
-                            setSelectedImageFile(event.target.files?.[0] || null);
-                            setUploadError('');
-                          }}
-                          disabled={isSaving || isUploadingImage}
-                          className="hidden"
-                        />
-                        Chọn ảnh từ máy
-                      </label>
-                    ) : null}
-
-                    {imageSourceMode === 'cloudinary' && isCloudinaryPickerOpen ? (
-                      <div className="absolute left-0 right-0 top-14 z-20 space-y-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
-                        {cloudinaryImageError ? <div className="text-xs font-medium text-red-600">{cloudinaryImageError}</div> : null}
-                        {isLoadingCloudinaryImages ? <div className="text-xs font-medium text-slate-600">Đang tải ảnh Cloudinary...</div> : null}
-                        {!isLoadingCloudinaryImages && !cloudinaryImages.length && !cloudinaryImageError ? (
-                          <div className="rounded-xl border border-dashed border-slate-300 bg-white px-3 py-4 text-center text-xs font-medium text-slate-600">
-                            Chưa có ảnh trong Cloudinary.
-                          </div>
-                        ) : null}
-                        {cloudinaryImages.length ? (
-                          <div className="grid max-h-48 grid-cols-3 gap-2 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2">
-                            {cloudinaryImages.map((image) => (
-                              <button
-                                key={image.publicId}
-                                type="button"
-                                onClick={() => selectCloudinaryImage(image.imageUrl)}
-                                className={[
-                                  'overflow-hidden rounded-lg border bg-white transition hover:border-[#135a91]',
-                                  form.imageUrl === image.imageUrl ? 'border-[#135a91] ring-2 ring-sky-100' : 'border-slate-200',
-                                ].join(' ')}
-                                title={image.publicId}
-                              >
-                                <img src={image.imageUrl} alt={image.publicId} className="h-16 w-full object-cover" />
-                              </button>
-                            ))}
-                          </div>
-                        ) : null}
-                        <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => {
-                              setImageSourceMode('local');
-                              setIsCloudinaryPickerOpen(false);
-                            }}
-                          >
-                            Hủy
-                          </Button>
-                          <Button type="button" onClick={() => setIsCloudinaryPickerOpen(false)}>
-                            Xong
-                          </Button>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
+                  <Button type="button" variant="outline" onClick={() => setIsImageModalOpen(true)} disabled={isSaving}>
+                    Chọn ảnh
+                  </Button>
                 ) : null}
                 <div className="text-xs font-medium text-slate-700">
-                  {selectedImageFile ? selectedImageFile.name : previewImageUrl ? 'Đang dùng ảnh hiện tại.' : 'Chưa chọn tệp ảnh.'}
+                  {previewImageUrl ? 'Đang dùng ảnh hiện tại.' : 'Chưa chọn tệp ảnh.'}
                 </div>
                 {uploadError ? <div className="text-xs font-medium text-red-600">{uploadError}</div> : null}
                 {previewImageUrl ? (
@@ -638,11 +488,24 @@ export function ProductModal({
             </Button>
           ) : null}
           {!isReadOnly ? (
-            <Button type="button" size="sm" onClick={() => void handleSubmit()} disabled={isSaving || isUploadingImage}>
-              {isSaving || isUploadingImage ? 'Đang lưu...' : mode === 'create' ? 'Tạo sản phẩm' : 'Lưu thay đổi'}
+            <Button type="button" size="sm" onClick={() => void handleSubmit()} disabled={isSaving}>
+              {isSaving ? 'Đang lưu...' : mode === 'create' ? 'Tạo sản phẩm' : 'Lưu thay đổi'}
             </Button>
           ) : null}
         </div>
+
+        <ImageUploadModal
+          open={isImageModalOpen}
+          title="Chọn ảnh sản phẩm"
+          currentImageUrl={form.imageUrl}
+          loadImages={loadProductImages}
+          uploadImage={uploadProductImage}
+          onSelect={(imageUrl) => {
+            handleChange('imageUrl', imageUrl);
+            setUploadError('');
+          }}
+          onClose={() => setIsImageModalOpen(false)}
+        />
       </div>
 
       <AdminConfirmModal

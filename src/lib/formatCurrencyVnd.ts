@@ -1,3 +1,7 @@
+function isPlainNumberText(value: string) {
+  return /^[\d\s.,-]+$/.test(value.trim());
+}
+
 function toWholeVnd(value: string | number | null | undefined) {
   if (typeof value === 'number') {
     return Number.isFinite(value) ? Math.round(value) : 0;
@@ -9,6 +13,13 @@ function toWholeVnd(value: string | number | null | undefined) {
 }
 
 export function formatCurrencyVnd(value: string | number | null | undefined) {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed && !isPlainNumberText(trimmed)) {
+      return trimmed;
+    }
+  }
+
   const amount = toWholeVnd(value);
   return `${amount.toLocaleString('vi-VN')}VNĐ`;
 }

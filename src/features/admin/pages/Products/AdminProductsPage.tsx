@@ -384,7 +384,15 @@ export function AdminProductsPage() {
           />
         ),
       },
-      { key: 'title', title: 'Tên sản phẩm', sortable: true, render: (row) => <span className="text-slate-900">{row.title}</span> },
+      {
+        key: 'title',
+        title: 'Tên sản phẩm',
+        sortable: true,
+        width: '300px',
+        headerClassName: 'max-w-[300px]',
+        cellClassName: 'max-w-[300px]',
+        render: (row) => <span className="line-clamp-2 text-sm leading-5 text-slate-900">{row.title}</span>,
+      },
       { key: 'categoryName', title: 'Danh mục', sortable: true },
       { key: 'brand', title: 'Hãng', sortable: true },
       { key: 'priceVnd', title: 'Giá', sortable: true, align: 'right' },
