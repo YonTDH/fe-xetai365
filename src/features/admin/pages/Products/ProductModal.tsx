@@ -202,7 +202,9 @@ export function ProductModal({
           'flex flex-col border border-slate-200 bg-white shadow-2xl',
           isPageVariant
             ? 'min-h-[calc(100vh-160px)] w-full overflow-visible rounded-2xl'
-            : 'h-[92vh] max-h-[92vh] w-full max-w-7xl overflow-hidden rounded-2xl',
+            : activeTab === 'info'
+              ? 'max-h-[92vh] w-full max-w-7xl overflow-hidden rounded-2xl'
+              : 'h-[92vh] max-h-[92vh] w-full max-w-7xl overflow-hidden rounded-2xl',
         ].join(' ')}
         onMouseDown={(event) => event.stopPropagation()}
       >
@@ -230,7 +232,7 @@ export function ProductModal({
 
         <div className={[isPageVariant ? 'overflow-visible pb-16' : 'overflow-hidden', 'min-h-0 flex-1 px-5 py-4'].join(' ')}>
           {activeTab === 'info' || isPageVariant ? (
-            <div className={isPageVariant ? 'pr-1' : 'h-full overflow-y-auto pr-1'}>
+            <div className={isPageVariant || activeTab === 'info' ? 'overflow-y-auto pr-1' : 'h-full overflow-y-auto pr-1'}>
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
               <div className="grid gap-3 md:grid-cols-2">
                 <Field label="Tên sản phẩm">
