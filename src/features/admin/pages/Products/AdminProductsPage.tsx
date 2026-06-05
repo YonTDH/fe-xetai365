@@ -220,8 +220,8 @@ export function AdminProductsPage() {
       if (isEditRoute) {
         navigate('/admin/san-pham');
       }
-    } catch {
-      const message = 'Khong the xoa muc da chon.';
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể lưu sản phẩm.';
       setError(message);
       showToast({ type: 'error', message });
     } finally {
@@ -395,7 +395,15 @@ export function AdminProductsPage() {
       },
       { key: 'categoryName', title: 'Danh mục', sortable: true },
       { key: 'brand', title: 'Hãng', sortable: true },
-      { key: 'priceVnd', title: 'Giá', sortable: true, align: 'right' },
+      {
+        key: 'priceVnd',
+        title: 'Giá',
+        sortable: true,
+        align: 'right',
+        width: '180px',
+        headerClassName: 'whitespace-nowrap',
+        cellClassName: 'whitespace-nowrap text-sm',
+      },
       {
         key: 'isVisible',
         title: 'Hiển thị',
@@ -596,6 +604,4 @@ export function AdminProductsPage() {
     </>
   );
 }
-
-
 
