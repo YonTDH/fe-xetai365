@@ -1,4 +1,4 @@
-import { AdminBulletinManager } from '../components/AdminBulletinManager';
+import { AdminBulletinManager } from '../../components/AdminBulletinManager';
 
 export function AdminServicesPage() {
   return (
@@ -6,6 +6,7 @@ export function AdminServicesPage() {
       type="services"
       heading="Dịch vụ"
       description="Quản lý các bài viết dịch vụ hiển thị trên website."
+      sectionPath="/admin/dich-vu"
     />
   );
 }

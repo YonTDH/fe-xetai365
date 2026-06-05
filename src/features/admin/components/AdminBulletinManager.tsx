@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { CheckCircle2, Circle, Eye, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ type AdminBulletinManagerProps = {
   type: AdminBulletinType;
   heading: string;
   description: string;
+  sectionPath: string;
 };
 
 type BulletinRow = {
@@ -118,10 +120,15 @@ function renderVisibilityIcon(isVisible: boolean, label: string) {
   );
 }
 
-export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProps) {
+export function AdminBulletinManager({ type, heading, sectionPath }: AdminBulletinManagerProps) {
+  const navigate = useNavigate();
+  const { action, itemId } = useParams<{ action?: string; itemId?: string }>();
   const { showToast } = useAppToast();
   const [items, setItems] = useState<AdminBulletin[]>([]);
+  const [editRouteItem, setEditRouteItem] = useState<AdminBulletin | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingModal, setIsLoadingModal] = useState(false);
+  const [isLoadingEditRoute, setIsLoadingEditRoute] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -131,6 +138,8 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
   const [keyword, setKeyword] = useState('');
   const [visibilityFilter, setVisibilityFilter] = useState<'all' | 'visible' | 'hidden'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | AdminBulletinStatus>('all');
+  const editRouteId = action === 'sua' ? Number(itemId) : 0;
+  const isEditRoute = Number.isInteger(editRouteId) && editRouteId > 0;
 
   const loadItems = useCallback(async () => {
     try {
@@ -155,6 +164,41 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
     setStatusFilter('all');
     void loadItems();
   }, [loadItems, type]);
+
+  useEffect(() => {
+    if (!isEditRoute) {
+      setEditRouteItem(null);
+      return;
+    }
+
+    let isActive = true;
+
+    async function loadEditRouteItem() {
+      try {
+        setIsLoadingEditRoute(true);
+        setError('');
+        const detail = await getAdminBulletinDetail(editRouteId);
+        if (isActive) {
+          setEditRouteItem(detail.bulletinType === type ? detail : null);
+        }
+      } catch (err) {
+        if (isActive) {
+          setEditRouteItem(null);
+          setError(err instanceof Error ? err.message : 'Không thể tải bài viết cần sửa.');
+        }
+      } finally {
+        if (isActive) {
+          setIsLoadingEditRoute(false);
+        }
+      }
+    }
+
+    void loadEditRouteItem();
+
+    return () => {
+      isActive = false;
+    };
+  }, [editRouteId, isEditRoute, type]);
 
   const rows = useMemo(() => items.map(mapBulletinToRow), [items]);
   const filteredRows = useMemo(() => {
@@ -202,27 +246,44 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
   };
 
   const openModal = useCallback(async (mode: 'view' | 'edit', id: number) => {
+    const localItem = items.find((entry) => entry.id === id);
+    if (localItem) {
+      setModalState({ mode, item: localItem });
+      return;
+    }
+
     try {
-      setIsLoading(true);
+      setIsLoadingModal(true);
       setError('');
       const detail = await getAdminBulletinDetail(id);
       setModalState({ mode, item: detail });
-    } catch {
-      const message = 'Khong the xoa muc da chon.';
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể tải bài viết.';
       setError(message);
       showToast({ type: 'error', message });
     } finally {
-      setIsLoading(false);
+      setIsLoadingModal(false);
     }
-  }, [showToast]);
+  }, [items, showToast]);
 
   const closeModal = () => {
     if (isSaving) return;
     setModalState(null);
   };
 
+  const closeEditPage = () => {
+    if (isSaving) return;
+    navigate(sectionPath);
+  };
+
   const switchModalToEdit = () => {
     setModalState((prev) => (prev?.item ? { mode: 'edit', item: prev.item } : prev));
+  };
+
+  const openContentEditPage = () => {
+    if (!modalState?.item) return;
+    setModalState(null);
+    navigate(`${sectionPath}/sua/${modalState.item.id}`);
   };
 
   const handleSave = async (payload: AdminBulletinPayload) => {
@@ -239,13 +300,20 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
       if (modalState?.mode === 'create') {
         await createAdminBulletin(normalizedPayload);
         showToast({ type: 'success', message: 'Đã tạo bài viết mới.' });
-      } else if (modalState?.item) {
-        await updateAdminBulletin(modalState.item.id, normalizedPayload);
+      } else {
+        const targetItem = modalState?.item ?? editRouteItem;
+        if (!targetItem) {
+          return;
+        }
+        await updateAdminBulletin(targetItem.id, normalizedPayload);
         showToast({ type: 'success', message: 'Đã cập nhật bài viết.' });
       }
 
       setModalState(null);
       await loadItems();
+      if (isEditRoute) {
+        navigate(sectionPath);
+      }
     } catch (err) {
       let message = 'Khong the xoa muc da chon.';
       if (err instanceof Error) message = err.message;
@@ -453,7 +521,7 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
                 event.stopPropagation();
                 void openModal('view', row.id);
               }}
-              disabled={isSaving}
+              disabled={isSaving || isLoadingModal}
             >
               <Eye className="h-4 w-4" />
             </Button>
@@ -467,7 +535,7 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
                 event.stopPropagation();
                 void openModal('edit', row.id);
               }}
-              disabled={isSaving}
+              disabled={isSaving || isLoadingModal}
             >
               <Pencil className="h-4 w-4" />
             </Button>
@@ -481,7 +549,7 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
                 event.stopPropagation();
                 requestDelete(row);
               }}
-              disabled={isSaving}
+              disabled={isSaving || isLoadingModal}
               className="border-red-200 text-red-600 hover:border-red-300 hover:bg-red-50 hover:text-red-700"
             >
               <Trash2 className="h-4 w-4" />
@@ -490,11 +558,34 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
         ),
       },
     ],
-    [allSelected, heading, isSaving, openModal, selectedIds, toggleSelectAll]
+    [allSelected, heading, isLoadingModal, isSaving, openModal, selectedIds, toggleSelectAll]
   );
 
   return (
     <>
+      {isEditRoute ? (
+        <div className="space-y-4">
+          {error ? <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
+          {isLoadingEditRoute ? (
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-600">Đang tải bài viết...</div>
+          ) : editRouteItem ? (
+            <AdminBulletinModal
+              open
+              variant="page"
+              item={editRouteItem}
+              mode="edit"
+              type={type}
+              isSaving={isSaving}
+              onClose={closeEditPage}
+              onSave={handleSave}
+            />
+          ) : (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-6 text-sm text-amber-800">
+              Không tìm thấy bài viết cần sửa.
+            </div>
+          )}
+        </div>
+      ) : (
       <div className="space-y-4">
         {error ? <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
 
@@ -504,7 +595,10 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
           loading={isLoading}
           emptyText="Chưa có bài viết."
           getRowKey={(row) => row.id}
-          onRowClick={(row) => void openModal('view', row.id)}
+          onRowClick={(row) => {
+            if (isSaving || isLoadingModal) return;
+            void openModal('view', row.id);
+          }}
           filters={
             <AdminTableFilters
               keyword={keyword}
@@ -556,15 +650,17 @@ export function AdminBulletinManager({ type, heading }: AdminBulletinManagerProp
           }
         />
       </div>
+      )}
 
       <AdminBulletinModal
-        open={Boolean(modalState)}
+        open={!isEditRoute && Boolean(modalState)}
         item={modalState?.item ?? null}
         mode={modalState?.mode ?? 'view'}
         type={type}
         isSaving={isSaving}
         onClose={closeModal}
         onEdit={switchModalToEdit}
+        onEditContent={openContentEditPage}
         onSave={handleSave}
       />
 

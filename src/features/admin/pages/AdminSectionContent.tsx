@@ -6,11 +6,11 @@ import { AdminSlidesPage } from './Banner/AdminSlidesPage';
 import { AdminContactRequestsPage } from './AdminContactRequestsPage';
 import { AdminCategoryLevel1Page } from './Category-lv1/AdminCategoryLevel1Page';
 import { AdminCategoryLevel2Page } from './Category-lv2/AdminCategoryLevel2Page';
-import { AdminNewsPage } from './AdminNewsPage';
-import { AdminPromotionPage } from './AdminPromotionPage';
 import { AdminProductsPage } from './Products/AdminProductsPage';
-import { AdminRecruitmentPage } from './AdminRecruitmentPage';
-import { AdminServicesPage } from './AdminServicesPage';
+import { AdminNewsPage } from './News/AdminNewsPage';
+import { AdminPromotionPage } from './Promotion/AdminPromotionPage';
+import { AdminRecruitmentPage } from './Recruitment/AdminRecruitmentPage';
+import { AdminServicesPage } from './Services/AdminServicesPage';
 import { AdminShowroomPage } from './Showroom/AdminShowroomPage';
 
 export function AdminSectionContent({

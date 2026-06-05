@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
+import { ImageUploadModal, type ImageUploadModalItem } from '@/components/ImageUploadModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { sanitizeHtml } from '@/lib/sanitizeHtml';
 import { AdminConfirmModal } from './AdminConfirmModal';
+import { RichTextEditor } from '../pages/Products/ProductRichTextEditor';
 import {
   importAdminBulletinDocx,
+  listAdminUploadedImages,
   uploadAdminImage,
+  type AdminUploadFolder,
   type AdminBulletin,
   type AdminBulletinDocxImportResult,
   type AdminBulletinPayload,
@@ -19,9 +23,11 @@ type AdminBulletinModalProps = {
   mode: 'view' | 'edit' | 'create';
   type: AdminBulletinType;
   open: boolean;
+  variant?: 'modal' | 'page';
   isSaving?: boolean;
   onClose: () => void;
   onEdit?: () => void;
+  onEditContent?: () => void;
   onSave: (payload: AdminBulletinPayload) => void;
 };
 
@@ -106,6 +112,13 @@ function slugifyVietnamese(value: string) {
     .replace(/-{2,}/g, '-');
 }
 
+function getBulletinUploadFolder(type: AdminBulletinType): AdminUploadFolder {
+  if (type === 'recruitment') return 'recruitment';
+  if (type === 'news_event') return 'news';
+  if (type === 'services') return 'services';
+  return 'promotions';
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block space-y-2">
@@ -145,16 +158,16 @@ export function AdminBulletinModal({
   mode,
   type,
   open,
+  variant = 'modal',
   isSaving = false,
   onClose,
   onEdit,
+  onEditContent,
   onSave,
 }: AdminBulletinModalProps) {
   const [form, setForm] = useState<FormState>(() => createEmptyForm(type));
-  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [selectedDocxFile, setSelectedDocxFile] = useState<File | null>(null);
-  const [selectedImagePreviewUrl, setSelectedImagePreviewUrl] = useState('');
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isImportingDocx, setIsImportingDocx] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [docxImportError, setDocxImportError] = useState('');
@@ -170,39 +183,25 @@ export function AdminBulletinModal({
     const nextForm = item ? mapBulletinToForm(item) : createEmptyForm(type);
     setForm(nextForm);
     setInitialSnapshot(JSON.stringify(nextForm));
-    setSelectedImageFile(null);
+    setIsImageModalOpen(false);
     setSelectedDocxFile(null);
-    setSelectedImagePreviewUrl('');
-    setIsUploadingImage(false);
     setIsImportingDocx(false);
     setUploadError('');
     setDocxImportError('');
     setDocxImportSuccess('');
     setDocxImportWarnings([]);
-    setActiveTab('info');
+    setActiveTab(variant === 'page' ? 'content' : 'info');
     setConfirmCloseOpen(false);
-  }, [item, open, type]);
+  }, [item, open, type, variant]);
 
   const requestClose = useCallback(() => {
     if (isSaving) return;
-    if (mode !== 'view' && (JSON.stringify(form) !== initialSnapshot || selectedImageFile || selectedDocxFile)) {
+    if (mode !== 'view' && (JSON.stringify(form) !== initialSnapshot || selectedDocxFile)) {
       setConfirmCloseOpen(true);
       return;
     }
     onClose();
-  }, [form, initialSnapshot, isSaving, mode, onClose, selectedDocxFile, selectedImageFile]);
-
-  useEffect(() => {
-    if (!selectedImageFile) {
-      setSelectedImagePreviewUrl('');
-      return;
-    }
-
-    const objectUrl = URL.createObjectURL(selectedImageFile);
-    setSelectedImagePreviewUrl(objectUrl);
-
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [selectedImageFile]);
+  }, [form, initialSnapshot, isSaving, mode, onClose, selectedDocxFile]);
 
   useEffect(() => {
     if (!open || isSaving) return;
@@ -213,11 +212,26 @@ export function AdminBulletinModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSaving, open, requestClose]);
 
+  const loadBulletinImages = useCallback(async (): Promise<ImageUploadModalItem[]> => {
+    const images = await listAdminUploadedImages('all', 100);
+    return images.map((image) => ({
+      id: image.publicId,
+      imageUrl: image.imageUrl,
+      title: image.publicId.split('/').pop() || image.publicId,
+    }));
+  }, []);
+
+  const uploadBulletinImage = useCallback(
+    (file: File) => uploadAdminImage(file, getBulletinUploadFolder(type)),
+    [type]
+  );
+
   if (!open) return null;
 
   const isReadOnly = mode === 'view';
+  const isPageVariant = variant === 'page';
   const previewHtml = hasHtml(form.content);
-  const previewImageUrl = selectedImagePreviewUrl || form.imageUrl;
+  const previewImageUrl = form.imageUrl;
 
   const handleChange = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => {
@@ -234,49 +248,17 @@ export function AdminBulletinModal({
     });
   };
 
-  const uploadPendingImage = async () => {
-    if (!selectedImageFile) {
-      return form.imageUrl;
-    }
-
-    const folder =
-      type === 'recruitment'
-        ? 'recruitment'
-        : type === 'news_event'
-          ? 'news'
-          : type === 'services'
-            ? 'services'
-            : 'promotions';
-
-    setIsUploadingImage(true);
-    setUploadError('');
-
-    try {
-      const uploaded = await uploadAdminImage(selectedImageFile, folder);
-      return uploaded.imageUrl;
-    } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Không thể upload ảnh.');
-    } finally {
-      setIsUploadingImage(false);
-    }
-  };
-
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (isReadOnly) {
       requestClose();
       return;
     }
 
-    try {
-      const imageUrl = await uploadPendingImage();
-      onSave({
-        ...form,
-        bulletinType: type,
-        imageUrl,
-      });
-    } catch (err) {
-      setUploadError(err instanceof Error ? err.message : 'Không thể upload ảnh.');
-    }
+    onSave({
+      ...form,
+      bulletinType: type,
+      imageUrl: form.imageUrl.trim(),
+    });
   };
 
   const applyDocxImportToForm = (imported: AdminBulletinDocxImportResult) => {
@@ -326,15 +308,25 @@ export function AdminBulletinModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm"
+      className={
+        isPageVariant
+          ? 'w-full'
+          : 'fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm'
+      }
       onMouseDown={(event) => {
+        if (isPageVariant) return;
         if (isSaving) return;
         if (panelRef.current && !panelRef.current.contains(event.target as Node)) requestClose();
       }}
     >
       <div
         ref={panelRef}
-        className="flex max-h-[88vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
+        className={[
+          'flex flex-col border border-slate-200 bg-white shadow-2xl',
+          isPageVariant
+            ? 'min-h-[calc(100vh-160px)] w-full overflow-visible rounded-2xl'
+            : 'max-h-[88vh] w-full max-w-6xl overflow-hidden rounded-3xl',
+        ].join(' ')}
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
@@ -349,18 +341,19 @@ export function AdminBulletinModal({
           </Button>
         </div>
 
+        {!isPageVariant ? (
         <div className="border-b border-slate-200 bg-slate-50/70 px-6 py-4">
           <div className="flex flex-wrap items-center gap-2">
             <TabButton label="Thông tin" active={activeTab === 'info'} onClick={() => setActiveTab('info')} />
-            <TabButton label="Nội dung" active={activeTab === 'content'} onClick={() => setActiveTab('content')} />
-            <TabButton label="SEO" active={activeTab === 'seo'} onClick={() => setActiveTab('seo')} />
             <TabButton label="Xem trước" active={activeTab === 'preview'} onClick={() => setActiveTab('preview')} />
+            <TabButton label="SEO" active={activeTab === 'seo'} onClick={() => setActiveTab('seo')} />
           </div>
         </div>
+        ) : null}
 
-        <div className="flex-1 overflow-y-auto px-6 py-5">
-          {activeTab === 'info' ? (
-            <div className="grid min-h-[560px] gap-4 md:grid-cols-2">
+        <div className={[isPageVariant ? 'overflow-visible pb-16' : 'overflow-y-auto', 'flex-1 px-6 py-5'].join(' ')}>
+          {activeTab === 'info' || isPageVariant ? (
+            <div className="grid gap-4 md:grid-cols-2">
               <Field label="Tiêu đề">
                 <Input value={form.title} onChange={(event) => handleChange('title', event.target.value)} readOnly={isReadOnly || isSaving} />
               </Field>
@@ -397,24 +390,13 @@ export function AdminBulletinModal({
                   <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     {!isReadOnly ? (
                       <div className="flex flex-wrap items-center gap-4">
-                        <label className="inline-flex cursor-pointer items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(event) => {
-                              setSelectedImageFile(event.target.files?.[0] || null);
-                              setUploadError('');
-                            }}
-                            disabled={isSaving || isUploadingImage}
-                            className="hidden"
-                          />
+                        <Button type="button" variant="outline" onClick={() => setIsImageModalOpen(true)} disabled={isSaving}>
                           Chọn ảnh
-                        </label>
-                        <div className="text-xs text-slate-500">Ảnh sẽ tự upload khi nhấn lưu.</div>
+                        </Button>
                       </div>
                     ) : null}
                     <div className="text-xs text-slate-500">
-                      {selectedImageFile ? selectedImageFile.name : previewImageUrl ? 'Đang dùng ảnh hiện tại.' : 'Chưa chọn tệp ảnh.'}
+                      {previewImageUrl ? 'Đang dùng ảnh hiện tại.' : 'Chưa chọn tệp ảnh.'}
                     </div>
                     {uploadError ? <div className="text-xs text-red-600">{uploadError}</div> : null}
                     {previewImageUrl ? (
@@ -462,8 +444,8 @@ export function AdminBulletinModal({
             </div>
           ) : null}
 
-          {activeTab === 'content' ? (
-            <div className="grid min-h-[560px] gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+          {activeTab === 'content' || isPageVariant ? (
+            <div className={isPageVariant ? 'mt-5 border-t border-slate-200 pt-5' : ''}>
               <div className="space-y-4">
                 {!isReadOnly ? (
                   <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
@@ -522,29 +504,19 @@ export function AdminBulletinModal({
                   />
                 </Field>
                 <Field label="Nội dung bài viết">
-                  <textarea
+                  <RichTextEditor
                     value={form.content}
-                    onChange={(event) => handleChange('content', event.target.value)}
-                    readOnly={isReadOnly || isSaving}
-                    aria-label="Nội dung bài viết"
-                    title="Nội dung bài viết"
-                    className="min-h-[420px] w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900"
+                    readOnly={isReadOnly}
+                    disabled={isSaving}
+                    onChange={(nextContent) => handleChange('content', nextContent)}
                   />
                 </Field>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="mb-3 text-sm font-semibold text-slate-900">Gợi ý biên tập</div>
-                <div className="space-y-3 text-sm leading-6 text-slate-600">
-                  <p>Mô tả ngắn nên đủ để hiển thị ở danh sách và preview mạng xã hội.</p>
-                  <p>Nếu nhập từ Word, hãy kiểm tra lại tiêu đề, đoạn mở đầu và ảnh đại diện.</p>
-                  <p>Khi bài có nhiều ảnh hoặc bảng, tab xem trước sẽ giúp phát hiện lỗi bố cục.</p>
-                </div>
               </div>
             </div>
           ) : null}
 
           {activeTab === 'seo' ? (
-            <div className="grid min-h-[560px] gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
               <div className="space-y-4">
                 <Field label="Title SEO">
                   <Input value={form.titleSeo} onChange={(event) => handleChange('titleSeo', event.target.value)} readOnly={isReadOnly || isSaving} />
@@ -575,7 +547,7 @@ export function AdminBulletinModal({
           ) : null}
 
           {activeTab === 'preview' ? (
-            <div className="mx-auto min-h-[560px] max-w-4xl space-y-6">
+            <div className="mx-auto max-w-4xl space-y-6">
               <article className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
                 {previewImageUrl ? (
                   <img src={previewImageUrl} alt={form.title || 'Ảnh bài viết'} className="h-80 w-full object-cover" />
@@ -604,21 +576,42 @@ export function AdminBulletinModal({
           ) : null}
         </div>
 
-        <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+        <div className={[
+            'flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4',
+            isPageVariant ? 'sticky bottom-0 z-40 rounded-b-2xl shadow-[0_-8px_24px_rgba(15,23,42,0.08)]' : '',
+          ].join(' ')}>
           <Button type="button" variant="outline" onClick={requestClose} disabled={isSaving}>
             Đóng
           </Button>
-          {isReadOnly ? (
-            <Button type="button" onClick={onEdit} disabled={isSaving || !onEdit}>
+          {isReadOnly && activeTab !== 'preview' ? (
+            <Button type="button" size="sm" onClick={onEdit} disabled={isSaving || !onEdit}>
               Sửa
             </Button>
           ) : null}
+          {isReadOnly && activeTab === 'preview' && !isPageVariant && item ? (
+            <Button type="button" size="sm" onClick={onEditContent} disabled={isSaving || !onEditContent}>
+              Sửa nội dung
+            </Button>
+          ) : null}
           {!isReadOnly ? (
-            <Button type="button" onClick={() => void handleSubmit()} disabled={isSaving || isUploadingImage}>
-              {isSaving || isUploadingImage ? 'Đang lưu...' : mode === 'create' ? 'Tạo bài viết' : 'Lưu thay đổi'}
+            <Button type="button" size="sm" onClick={handleSubmit} disabled={isSaving}>
+              {isSaving ? 'Đang lưu...' : mode === 'create' ? 'Tạo bài viết' : 'Lưu thay đổi'}
             </Button>
           ) : null}
         </div>
+
+        <ImageUploadModal
+          open={isImageModalOpen}
+          title="Chọn ảnh bài viết"
+          currentImageUrl={form.imageUrl}
+          loadImages={loadBulletinImages}
+          uploadImage={uploadBulletinImage}
+          onSelect={(imageUrl) => {
+            handleChange('imageUrl', imageUrl);
+            setUploadError('');
+          }}
+          onClose={() => setIsImageModalOpen(false)}
+        />
       </div>
 
       <AdminConfirmModal
