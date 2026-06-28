@@ -7,6 +7,7 @@ export type LandingProduct = {
   brand: string;
   shortDescription: string;
   imageUrl: string;
+  priceVnd: string;
 };
 
 export type ProductImage = string | {
@@ -126,6 +127,29 @@ function toSafeString(value: unknown) {
   return typeof value === 'string' ? value : '';
 }
 
+function toDisplayString(value: unknown) {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value);
+  }
+
+  return '';
+}
+
+function resolvePriceValue(item: Record<string, unknown>) {
+  return (
+    item.priceVnd ??
+    item.price_vnd ??
+    item.priceText ??
+    item.price_text ??
+    item.price ??
+    item.gia
+  );
+}
+
 function toSafeNumber(value: unknown) {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
@@ -181,6 +205,7 @@ function mapProduct(item: Record<string, unknown>): LandingProduct {
     brand: toSafeString(item.brand),
     shortDescription: toSafeString(item.shortDescription || item.short_description),
     imageUrl: toSafeString(item.imageUrl || item.image_url),
+    priceVnd: toDisplayString(resolvePriceValue(item)),
   };
 }
 
@@ -200,7 +225,7 @@ function mapProductDetail(item: Record<string, unknown>): ProductDetail {
     mileageKm: toSafeNumber(item.mileageKm || item.mileage_km),
     fuelType: toSafeString(item.fuelType || item.fuel_type),
     transmission: toSafeString(item.transmission),
-    priceVnd: toSafeString(item.priceVnd || item.price_vnd),
+    priceVnd: toDisplayString(resolvePriceValue(item)),
     status: toSafeString(item.status),
     location: toSafeString(item.location),
     content: toSafeString(item.content),

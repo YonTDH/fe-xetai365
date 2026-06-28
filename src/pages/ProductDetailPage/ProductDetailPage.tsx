@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getProductDetail, getPublicSiteSetting, type ProductDetail, type ProductImage, type PublicSiteSetting } from '@/api/landingApi';
-import { formatCurrencyVnd } from '@/lib/formatCurrencyVnd';
 import { formatPhoneDisplay } from '@/lib/formatPhone';
+import { formatPublicPriceVnd } from '@/lib/formatPublicPriceVnd';
 import { sanitizeHtml } from '@/lib/sanitizeHtml';
 
 function normalizeIdOrSlug(value: string) {
@@ -49,6 +49,7 @@ export function ProductDetailPage() {
   const contentHasHtml = useMemo(() => hasHtmlContent(product?.content || ''), [product?.content]);
   const contactPhone = useMemo(() => siteSetting?.hotline || siteSetting?.dienthoai || '', [siteSetting]);
   const contactHref = useMemo(() => (contactPhone ? `tel:${contactPhone.replace(/[^\d+]/g, '')}` : ''), [contactPhone]);
+  const priceLabel = useMemo(() => formatPublicPriceVnd(product?.priceVnd), [product?.priceVnd]);
 
   const specs = useMemo(() => {
     if (!product) return [];
@@ -165,7 +166,7 @@ export function ProductDetailPage() {
 
               <h1 className="mt-4 text-2xl font-bold leading-tight text-navy-950 md:text-3xl">{product.title}</h1>
               {product.shortDescription && <p className="mt-4 text-base leading-relaxed text-slate-700">{product.shortDescription}</p>}
-              <div className="mt-4 text-3xl font-extrabold text-[#135a91]">{formatCurrencyVnd(product.priceVnd)}</div>
+              {priceLabel ? <div className="mt-4 text-3xl font-extrabold text-[#135a91]">{priceLabel}</div> : null}
 
               {specs.length > 0 && (
                 <dl className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">

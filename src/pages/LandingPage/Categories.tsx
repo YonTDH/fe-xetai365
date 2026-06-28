@@ -1,8 +1,6 @@
 import topProductImg from '@/assets/lading-page/top-product.png';
 import { PublicSectionHeading } from '@/components/PublicSectionHeading';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { formatPublicPriceVnd } from '@/lib/formatPublicPriceVnd';
 import {
   getCategoryDisplayName,
   isSummaryCategorySlug,
@@ -10,11 +8,18 @@ import {
   type CategoryNode,
   type LandingProduct,
 } from '@/api/landingApi';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 type CategoriesSectionProps = {
   categories: CategoryNode[];
   hotline?: string;
 };
+
+function getPriceLabel(priceVnd: string) {
+  return formatPublicPriceVnd(priceVnd);
+}
 
 export function CategoriesSection({ categories, hotline }: CategoriesSectionProps) {
   const rootCategories = useMemo(() => categories.filter((item) => item.id > 0), [categories]);
@@ -23,7 +28,7 @@ export function CategoriesSection({ categories, hotline }: CategoriesSectionProp
   const [products, setProducts] = useState<LandingProduct[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const safeHotline = hotline || 'Đang cập nhật';
+  const safeHotline = hotline || 'Dang cap nhat';
 
   useEffect(() => {
     if (rootCategories.length === 0) {
@@ -113,7 +118,7 @@ export function CategoriesSection({ categories, hotline }: CategoriesSectionProp
   return (
     <section className="bg-white py-12">
       <div className="container mx-auto px-4">
-        <PublicSectionHeading title="Sản phẩm theo danh mục" className="mb-5" />
+        <PublicSectionHeading title="San pham theo danh muc" className="mb-5" />
 
         <div className="mb-8 border-b-2 border-navy-950/20 pb-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
@@ -151,7 +156,7 @@ export function CategoriesSection({ categories, hotline }: CategoriesSectionProp
                       : 'text-gray-600 hover:text-navy-950',
                   ].join(' ')}
                 >
-                  Tất cả
+                  Tat ca
                 </button>
                 {level2Categories.map((level2) => {
                   const isActive = activeLevel2Category === level2.slug;
@@ -183,33 +188,43 @@ export function CategoriesSection({ categories, hotline }: CategoriesSectionProp
           </button>
 
           <div ref={scrollRef} className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-6 scroll-smooth md:gap-6">
-            {products.map((product) => (
-              <Link
-                key={product.id}
-                to={`/san-pham/chi-tiet/${product.slug}`}
-                className="flex w-[85%] shrink-0 snap-start flex-col border border-gray-200 bg-white transition-all duration-300 hover:shadow-xl md:w-[calc(40%-16px)] lg:w-[calc(28.57%-18px)]"
-              >
-                <div className="relative aspect-square shrink-0 overflow-hidden">
-                  <img
-                    src={product.imageUrl || topProductImg}
-                    alt={product.title}
-                    className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
-                  />
-                </div>
+            {products.map((product) => {
+              const priceLabel = getPriceLabel(product.priceVnd);
 
-                <div className="flex flex-1 flex-col">
-                  <div className="flex-1 bg-[#EAEAEA] p-3 md:p-4">
-                    <h3 className="text-sm font-bold leading-snug text-gray-800">{product.title}</h3>
+              return (
+                <Link
+                  key={product.id}
+                  to={`/san-pham/chi-tiet/${product.slug}`}
+                  className="flex w-[85%] shrink-0 snap-start flex-col border border-gray-200 bg-white transition-all duration-300 hover:shadow-xl md:w-[calc(40%-16px)] lg:w-[calc(28.57%-18px)]"
+                >
+                  <div className="relative aspect-square shrink-0 overflow-hidden">
+                    <img
+                      src={product.imageUrl || topProductImg}
+                      alt={product.title}
+                      className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
+                    />
                   </div>
-                  <div className="border-t border-white bg-[#F5F5F5] p-3 md:p-4">
-                    <p className="text-sm font-semibold text-gray-700">Liên hệ: {safeHotline}</p>
+
+                  <div className="flex flex-1 flex-col">
+                    <div className="flex-1 bg-[#EAEAEA] p-3 md:p-4">
+                      <h3 className="text-sm font-bold leading-snug text-gray-800">{product.title}</h3>
+                    </div>
+                    <div className="border-t border-white bg-[#F5F5F5] p-3 md:p-4">
+                      {priceLabel ? (
+                        <p className="text-sm font-bold text-[#135a91]">
+                          <span className="mr-1 text-gray-700">Giá:</span>
+                          {priceLabel}
+                        </p>
+                      ) : null}
+                      <p className="text-sm font-semibold text-gray-700">Liên hệ: {safeHotline}</p>
+                    </div>
                   </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
 
             {!isLoading && products.length === 0 && (
-              <p className="text-sm text-slate-500">Không có sản phẩm trong danh mục này.</p>
+              <p className="text-sm text-slate-500">Khong co san pham trong danh muc nay.</p>
             )}
           </div>
 
