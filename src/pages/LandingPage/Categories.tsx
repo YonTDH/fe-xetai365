@@ -118,7 +118,7 @@ export function CategoriesSection({ categories, hotline }: CategoriesSectionProp
   return (
     <section className="bg-white py-12">
       <div className="container mx-auto px-4">
-        <PublicSectionHeading title="San pham theo danh muc" className="mb-5" />
+        <PublicSectionHeading title="Sản phẩm theo danh mục" className="mb-5" />
 
         <div className="mb-8 border-b-2 border-navy-950/20 pb-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">

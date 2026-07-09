@@ -33,7 +33,7 @@ export function FeaturesSection({ products, hotline }: FeaturesSectionProps) {
   return (
     <section className="bg-white py-12">
       <div className="container mx-auto px-4">
-        <PublicSectionHeading title="San pham noi bat" />
+        <PublicSectionHeading title="Sản phẩm nổi bật" />
 
         <div className="group relative">
           <button
